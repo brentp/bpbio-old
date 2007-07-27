@@ -12,9 +12,9 @@ def add_locs_to_blast():
         q = line[0].split(sep) # name|start|stop
         s = line[1].split(sep) # name|start|stop
         locs = map(int,line[6:10])
-        locs[0]+=int(q[1])
-        locs[1]+=int(q[1])
-        locs[2]+=int(s[1])
-        locs[3]+=int(s[1])
+        locs[0]+=int(q[1]) -1
+        locs[1]+=int(q[1]) -1
+        locs[2]+=int(s[1]) -1
+        locs[3]+=int(s[1]) -1
         line[6:10] = map(str,locs)
         print "\t".join(line)
