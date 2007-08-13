@@ -1,6 +1,4 @@
-        
-
-def split_blast(blastfile,queryfn,subjectfn):
+def split_blast(blastfile,queryfn,subjectfn,qorg,sorg):
     """
     take a single blastfile of m chromosomes vs n chromosomes and split it
     into m * n files based on the queryfn, subjectfn functions which take
@@ -16,8 +14,12 @@ def split_blast(blastfile,queryfn,subjectfn):
         line = line.strip().split("\t")
         querychr = queryfn(line[0])
         subjectchr = subjectfn(line[1])
-        key = str(querychr) + '_' + str(subjectchr)
-        filename = blastfile[:blastfile.rfind(".")] + '_' + key + '.blast'
+        qchr = str(querychr)
+        schr = str(subjectchr)
+        key = qchr + '_' + schr
+        filename = qorg + 'chr' + qchr + '_vs_' \
+                 + sorg + 'chr' + schr + '.blast'
+
         if not key in outfiles:
             outfiles[key] = open(filename,'w')
         print >>outfiles[key], "\t".join(line)
@@ -26,4 +28,5 @@ def split_blast(blastfile,queryfn,subjectfn):
 
 if __name__ == "__main__":
     import sys
-    split_blast(sys.argv[1],lambda x: x[2:4], lambda x: 11)
+    split_blast(sys.argv[1],lambda x: x[2:3], lambda x: x[1:3], qorg=sys.argv[2], sorg=sys.argv[3])
+
