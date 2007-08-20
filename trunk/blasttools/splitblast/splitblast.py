@@ -28,5 +28,10 @@ def split_blast(blastfile,queryfn,subjectfn,qorg,sorg):
 
 if __name__ == "__main__":
     import sys
-    split_blast(sys.argv[1],lambda x: x[2:3], lambda x: x[1:3], qorg=sys.argv[2], sorg=sys.argv[3])
+    #split_blast(sys.argv[1],lambda x: x[2:3], lambda x: x[1:3], qorg=sys.argv[2], sorg=sys.argv[3])
+    def qschr(accn):
+        re.search('Sb(\d+)',accn).groups(0)[0]
 
+    split_blast(sys.argv[1], qschr, qschr, qorg=sys.argv[2], sorg=sys.argv[3])
+
+ 
