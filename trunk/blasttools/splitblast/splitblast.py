@@ -1,3 +1,5 @@
+import re
+
 def split_blast(blastfile,queryfn,subjectfn,qorg,sorg):
     """
     take a single blastfile of m chromosomes vs n chromosomes and split it
@@ -12,6 +14,11 @@ def split_blast(blastfile,queryfn,subjectfn,qorg,sorg):
     outfiles = {}
     for line in open(blastfile):
         line = line.strip().split("\t")
+
+        pct_id = float(line[2])
+        if pct_id > 99: continue
+        if pct_id < 50: continue
+
         querychr = queryfn(line[0])
         subjectchr = subjectfn(line[1])
         qchr = str(querychr)
@@ -22,16 +29,17 @@ def split_blast(blastfile,queryfn,subjectfn,qorg,sorg):
         filename = qorg + 'chr' + qchr + '_vs_' \
                  + sorg + 'chr' + schr + '.blast'
 
-        #if not key in outfiles:
-        #    outfiles[key] = open(filename,'w')
-        #print >>outfiles[key], "\t".join(line)
         for qs in (0, 1):
             if '.' in line[qs]:
                 line[qs] = line[qs][:line[qs].find('.')]
 
-        fh = open(filename,'a')
-        print >>fh, "\t".join(line)
-        fh.close()
+        if not key in outfiles:
+            outfiles[key] = open(filename,'w')
+        print >>outfiles[key], "\t".join(line)
+        #fh = open(filename,'a')
+        #fh.write("\t".join(line))
+        #fh.write("\n")
+        #fh.close()
 
 
 
@@ -45,16 +53,18 @@ if __name__ == "__main__":
             return None
         else: 
             return chr
+    osre = re.compile('^OS(\d+)')
     def oschr(accn):
-        return re.search('OS(\d+)',accn).groups(0)[0]
+        return re.search(osre,accn).groups(0)[0]
 
     
     maizefn = lambda x: x.split('|')[1] 
+    # arabidopsis
     #split_blast(sys.argv[1], lambda x: x[2:3], lambda x: x[2:3], qorg=sys.argv[2], sorg=sys.argv[3])
     #split_blast(sys.argv[1], qschr, qschr, qorg=sys.argv[2], sorg=sys.argv[3])
     #split_blast(sys.argv[1], lambda x: x.lstrip('>')[2:4], lambda x: x.lstrip('>')[2:4], qorg=sys.argv[2], sorg=sys.argv[3])
 
     #split_blast(sys.argv[1], maizefn, maizefn, qorg=sys.argv[2], sorg=sys.argv[3])
-    split_blast(sys.argv[1], sbchr, sbchr, qorg=sys.argv[2], sorg=sys.argv[3])
+    split_blast(sys.argv[1], oschr, oschr, qorg=sys.argv[2], sorg=sys.argv[3])
 
  
