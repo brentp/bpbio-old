@@ -15,8 +15,8 @@ BEGIN {
     my $start = $rows->[0]{'start'};
     my $did = $rows->[0]{'dataset_id'};
 
-    # convert the actual start (183891) to the 10Kmer
-    # that contains it (180001)
+    # convert the actual start (e.g. 183891) to the 10Kmer
+    # that contains it (e.g. 180001)
     my $fstart = $start - ( $start % 10000 ) + 1;
     my $stop = $rows->[-1]{'stop'};
     my $res;
