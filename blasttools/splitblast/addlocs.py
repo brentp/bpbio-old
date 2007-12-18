@@ -6,13 +6,16 @@
 """
 
 def updatefile(blastfile, outfile=None):
-    if out is None: outfile = blastfile.replace(".blast",".locs.blast")
+    out = None
+    if outfile is None: 
+        out = open(blastfile.replace(".blast",".locs.blast"),'w')
+    else: 
+        out = open(outfile,'w')
     fh = open(blastfile)
-    out = open(outfile,'w')
     for line in fh:
         line = line.split("\t")
-        qchrstart = int(line[0].split("||")[1])
-        schrstart = int(line[1].split("||")[1])
+        qchrstart = int(line[0].split("||")[1]) - 1
+        schrstart = int(line[1].split("||")[1]) - 1
         locs = map(int, line[6:10])
 
         locs[0] += qchrstart # qstart
@@ -24,9 +27,12 @@ def updatefile(blastfile, outfile=None):
         print >>out, "\t".join(line),
     out.close()
     fh.close()
-    return outfile
+    if outfile is None:
+        os.system('mv %s %s' % (blastfile.replace('.blast', '.locs.blast'), blastfile))
+    return outfile or blastfile
 
 
 if __name__ == "__main__":
     import sys
+    import os
     print updatefile(sys.argv[1])
