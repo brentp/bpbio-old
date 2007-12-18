@@ -32,6 +32,7 @@ def split_blast(blastfile,queryfn,subjectfn,qorg,sorg):
         for qs in (0, 1):
             if '.' in line[qs]:
                 line[qs] = line[qs][:line[qs].find('.')]
+        line[1] = line[1].split("||")[1]
 
         if not key in outfiles:
             outfiles[key] = open(filename,'w')
@@ -56,6 +57,10 @@ if __name__ == "__main__":
     osre = re.compile('^OS(\d+)')
     def oschr(accn):
         return re.search(osre,accn).groups(0)[0]
+    sbre = re.compile('(\d+)$')
+    def sbchr(accn):
+        a = accn.split("||")[1]
+        return re.search(sbre,a).groups(0)[0]
 
     
     maizefn = lambda x: x.split('|')[1] 
@@ -65,6 +70,6 @@ if __name__ == "__main__":
     #split_blast(sys.argv[1], lambda x: x.lstrip('>')[2:4], lambda x: x.lstrip('>')[2:4], qorg=sys.argv[2], sorg=sys.argv[3])
 
     #split_blast(sys.argv[1], maizefn, maizefn, qorg=sys.argv[2], sorg=sys.argv[3])
-    split_blast(sys.argv[1], oschr, oschr, qorg=sys.argv[2], sorg=sys.argv[3])
+    split_blast(sys.argv[1], oschr, sbchr, qorg=sys.argv[2], sorg=sys.argv[3])
 
  
