@@ -4,6 +4,8 @@
 05||003790001||003800000||10KMER    02||026520001||026530000||10KMER 94.81   77  4   0   8993    9069    4091    4015    1e-25    121
 05||003790001||003800000||10KMER    02||026520001||026530000||10KMER 88.50   113 11  2   8657    8768    4090    3979    6e-21    105
 """
+import sys
+import os
 
 def updatefile(blastfile, outfile=None):
     out = None
@@ -33,6 +35,6 @@ def updatefile(blastfile, outfile=None):
 
 
 if __name__ == "__main__":
-    import sys
-    import os
-    print updatefile(sys.argv[1])
+
+    for f in sys.argv[1:]:
+        print updatefile(f)
