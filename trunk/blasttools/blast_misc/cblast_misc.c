@@ -26,7 +26,6 @@ int add_locs(char *in_name, char *out_name){
     float evalue;
     FILE *IN, *OUT;
     
-    char *line;
     char query[128];
     char subject[128];
     unsigned int hit_length, nmiss, ngaps, qstart, qstop, sstart, sstop;
@@ -57,7 +56,7 @@ int add_locs(char *in_name, char *out_name){
     fclose(OUT);
     if(out_name == NULL){
         printf("OVERWRITING EXISTING BLAST FILE: %s WITH UPDATED LOCS.\n"
-                , in_name, tmp_name);
+                , in_name);
         rename(tmp_name, in_name);
     }
     return 0;

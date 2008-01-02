@@ -1,8 +1,8 @@
 
 all:
 	cython blast_misc.pyx
-	gcc -O3 -I/usr/include/python2.5 -c -o blast_misc.o blast_misc.c
-	gcc -shared blast_misc.o -o blast_misc.so
+	gcc -fPIC -O2 -Wstrict-prototypes  -pthread -fno-strict-aliasing -Wall -I/usr/include/python2.5 -c -o blast_misc.o blast_misc.c
+	gcc  -pthread -Wl,-O1 -shared blast_misc.o -o blast_misc.so
 
 
 #clean:
