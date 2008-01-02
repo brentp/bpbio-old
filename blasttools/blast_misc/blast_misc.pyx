@@ -10,6 +10,7 @@ import operator
 import collections
 import os
 import numpy 
+import cPickle
 
 
 BLAST_NAMES = ['query', 'subject', 'percent_id', 'hit_length', 'n_mismatch', \
@@ -133,6 +134,28 @@ def blast_array(fi, dopickle=1, best_hit=1, maxkeep=6):
     if best_hit: ra = ra[ra['hit_rank'] == 0]
     return ra
  
+def geneorder(fn, picklef=None, dups=set([]), field=None):
+    """\
+    take an array (`fn`) from blast_array and **returns the ordered genelist**
+    as a hash where the values are the index/order.  this should be called with
+    all self-self blast chromosomes to make sure to get all accns.
+    **NOTE**: this assumes that the genes can be sorted lexically as in
+    arabidopsis: ['AT1G01010','AT1G01020' ...]
+    if they cannot be sorted lexically, you must provide a new function which
+    returns a dict of name=>order pairs.
+    """
+    arr = blast_array(fn, best_hit=1)
+    if field:
+        genelist = numpy.sort(numpy.unique( arr.field(field)))
+    else:
+        genelist = numpy.sort(numpy.unique(numpy.vstack(( arr.field("query"), arr.field("subject") ))   ))
+    gorder = dict([(g,i) for g, i in zip(genelist, xrange(genelist.shape[0])) \
+                      if not g in dups])
+
+    if picklef is not None:
+        cPickle.dump(gorder, open(picklef, 'wb'), -1)
+    return gorder
+
 
 def order_from_blast_list(*args):
     """ args is a list of blast filenames
