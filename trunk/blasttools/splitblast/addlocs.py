@@ -1,3 +1,4 @@
+
 """
 05||003790001||003800000||10KMER    02||031690001||031700000||10KMER 84.62   78  12  0   8631    8708    7448    7371    3e-07   60.0
 05||003790001||003800000||10KMER    02||031690001||031700000||10KMER 84.42   77  12  0   8969    9045    7447    7371    1e-06   58.0
@@ -7,11 +8,11 @@
 import sys
 import os
 
-def updatefile(blastfile, outfile=None):
+def updatefile(blastfile, outfile):
     out = None
-    if outfile is None: 
+    if outfile is None:
         out = open(blastfile.replace(".blast",".locs.blast"),'w')
-    else: 
+    else:
         out = open(outfile,'w')
     fh = open(blastfile)
     for line in fh:
@@ -36,5 +37,11 @@ def updatefile(blastfile, outfile=None):
 
 if __name__ == "__main__":
 
+    import pp
+    s = pp.Server()
+    jobs = []
     for f in sys.argv[1:]:
-        print updatefile(f)
+        j = s.submit(updatefile, f, sys.stdout, (), ("os",))
+        jobs.append(j)
+    for j in jobs: print j()
+
