@@ -1,6 +1,6 @@
 import re
 
-def split_blast(blastfile,queryfn,subjectfn,qorg,sorg):
+def split_blast(blastfile, queryfn, subjectfn, qorg, sorg):
     """
     take a single blastfile of m chromosomes vs n chromosomes and split it
     into m * n files based on the queryfn, subjectfn functions which take
@@ -49,18 +49,18 @@ if __name__ == "__main__":
     import re
     #split_blast(sys.argv[1],lambda x: x[2:3], lambda x: x[1:3], qorg=sys.argv[2], sorg=sys.argv[3])
     def sbchr(accn):
-        chr = re.search('SB(\d+)',accn).groups(0)[0]
+        chr = re.search('SB(\d+)', accn).groups(0)[0]
         if int(chr) > 10:
             return None
         else: 
             return chr
     osre = re.compile('^OS(\d+)')
     def oschr(accn):
-        return re.search(osre,accn).groups(0)[0]
+        return re.search(osre, accn).groups(0)[0]
     sbre = re.compile('(\d+)$')
     def sbchr(accn):
         a = accn.split("||")[1]
-        return re.search(sbre,a).groups(0)[0]
+        return re.search(sbre, a).groups(0)[0]
 
     
     maizefn = lambda x: x.split('|')[1] 

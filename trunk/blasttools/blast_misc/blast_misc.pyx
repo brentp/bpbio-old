@@ -135,6 +135,8 @@ def blast_array(fi, dopickle=1, best_hit=1, maxkeep=6):
  
 
 def order_from_blast_list(*args):
+    """ args is a list of blast filenames
+    not yet implemented """
     cdef int qlen = 8, slen = 8, hlen, nmiss, ngap, qstart, qstop, sstart, sstop, icol = 0
     cdef float pct = 0.0, evalue = 0.0, bit = 0.0
     cdef char qname[128], sname[128]
