@@ -15,7 +15,8 @@ import glob
 
 format_db = "/usr/bin/formatdb -p F -i %s"
 # dont need to keep anything with > 80 hits as we mask at 50 anyway.
-blast_command = "/usr/bin/blastall -p blastn -K 80 -i %s -d %s -e 0.001 -m 8 -o %s/%schr%s_vs_%schr%s.blast "
+#blast_command = "/usr/bin/blastall -p blastn -K 80 -i %s -d %s -e 0.001 -m 8 -o %s/%schr%s_vs_%schr%s.blast "
+blast_command = "/usr/bin/blastall -p blastn -K 80 -i %s -d %s -e 0.05 -m 8 -o %s/%schr%s_vs_%schr%s.blast "
 
 s = pp.Server()
 
@@ -43,6 +44,9 @@ def consume(command):
 def main(query, subject, directory="fasta", outdir="blast"):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
+    bp = open(os.path.join(outdir, "00blast.params"), "w")
+    print >> bp, blast_command
+    bp.close()
 
     jobs = []
     for c in gen_command(query, subject, directory, outdir):
