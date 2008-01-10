@@ -106,6 +106,7 @@ def _blast_array(blastf, maxkeep):
 
 def blast_array(fi, dopickle=1, best_hit=1, maxkeep=6):
     file_name = 0
+    if not os.path.exists(fi): return []
     if not isinstance(fi, list) and type(fi) != numpy.recarray:
         file_name = fi + ".pickle"
 
