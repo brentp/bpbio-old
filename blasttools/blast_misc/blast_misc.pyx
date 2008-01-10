@@ -48,7 +48,7 @@ cdef extern from "Python.h":
 cdef extern from "cblast_misc.c":
     int add_locs(char *, char *)
 
-cdef char * blast_format = "%s\t%s\t%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%e\t%f\n"
+cdef char * blast_format = "%s\t%s\t%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%e\t%f*%s\n"
 
 #cdef inline int set_list(object PyList, int idx, object obj) except -1:
 #    Py_INCREF(<PyObject *>obj)
@@ -94,6 +94,7 @@ def _blast_array(blastf, maxkeep):
     arr = [] #PyList_New(0)
     # this is faster then using k,v in rec.items()
     for k in sorted(recs, key=operator.itemgetter(1)):
+        
         v = PyDict_GetItem(recs, k)  # was: v = recs[k]
         icol = 0
         for li in sorted(v, key=operator.itemgetter(10))[:maxkeep]:
