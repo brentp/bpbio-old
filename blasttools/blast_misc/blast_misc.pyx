@@ -55,13 +55,27 @@ cdef char * blast_format = "%s\t%s\t%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%e\t%f*%s\n"
 #    PyList_SET_ITEM(PyList, idx, obj)
 
 
+def inplace_rev(char* seq):
+    """ reverse a string in place
+    >>> a = "asdf123"
+    >>> inplace_rev(a)
+    >>> a
+    321fdsa
+    """
+    cdef int l = strlen(seq)
+    cdef int i
+    for i from 0 <= i < l / 2 :
+        seq[i] , seq[l - i - 1] =  seq[l - i - 1],  seq[i]
+
+
 def pyaddlocs(inname, outname=None):
-    """ take a file name and add the global locs 
-    inplace if outname==None, or to a new file (outname).
+    """take a file name :inname: and add the global locs 
+    inplace if :outname: ==None, or to a new file (outname).
     """
     if outname is None:
         return add_locs(inname, NULL)
     return add_locs(inname, outname)
+
 
 def pylocslist(*args):
     """ take a list of files to update inplace """
