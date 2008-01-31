@@ -13,7 +13,7 @@ int add_locs(char *in_name, char *out_name){
     char *tmp_name;
 
     if(out_name == NULL){
-        char tmp[30];
+        char tmp[60];
         tmp_name = tmpnam(tmp);
     }
     else {
@@ -57,7 +57,7 @@ int add_locs(char *in_name, char *out_name){
     if(out_name == NULL){
         printf("OVERWRITING EXISTING BLAST FILE: %s WITH UPDATED LOCS.\n"
                 , in_name);
-        rename(tmp_name, in_name);
+        printf("code:%d\n", rename(tmp_name, in_name));
     }
     return 0;
 

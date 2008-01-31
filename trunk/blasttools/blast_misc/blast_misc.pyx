@@ -73,7 +73,10 @@ def pyaddlocs(inname, outname=None):
     inplace if :outname: ==None, or to a new file (outname).
     """
     if outname is None:
-        return add_locs(inname, NULL)
+        outname = inname + ".tmp"
+        add_locs(inname, outname)
+        os.rename(outname, inname)
+        return inname
     return add_locs(inname, outname)
 
 
