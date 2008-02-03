@@ -7,7 +7,6 @@ run as file.py --help to see useage options.
 
 import commands
 import os
-import subprocess
 import sys
 import re
 import pp
@@ -15,8 +14,7 @@ import glob
 
 format_db = "/usr/bin/formatdb -p F -i %s"
 # dont need to keep anything with > 80 hits as we mask at 50 anyway.
-#blast_command = "/usr/bin/blastall -p blastn -K 80 -i %s -d %s -e 0.001 -m 8 -o %s/%schr%s_vs_%schr%s.blast "
-blast_command = "/usr/bin/blastall -p blastn -K 80 -i %s -d %s -e 0.05 -m 8 -o %s/%schr%s_vs_%schr%s.blast "
+blast_command = "/usr/bin/blastall -p blastn -K 80 -i %s -d %s -e 0.001 -m 8 -o %s/%schr%s_vs_%schr%s.blast "
 
 s = pp.Server()
 
