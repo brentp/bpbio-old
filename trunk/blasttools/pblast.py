@@ -6,7 +6,6 @@ the number of CPUs on the given machine full until all jobs are done.
 import commands
 import os
 import sys
-import re
 import pp
 import glob
 
@@ -15,11 +14,22 @@ import ConfigParser
 
 filen = lambda fullpath: fullpath[fullpath.rfind("/") + 1:fullpath.rfind(".")]
 """
+>>> filen = lambda path: fullpath[path.rfind("/") + 1:path.rfind(".")]
 >>> filen("/tmp/rice/fasta/ricetenkmers_chr06.fasta")
 '/ricetenkmers_chr06'
 """
 
 def gen_command(q_fastas, s_fastas, format_db, blast, out_dir):
+    """\
+    generator of blast commands given arguments:
+    'q_fastas' : a list/iterable of strings indicating the full path 
+                 to the set of query fastas.
+    's_fastas' : a list/iterable of strings ... subject ...
+    'format_db': a formatdb command (see pblast.ini for example)
+    'blast'    :  a blast command string (see pblast.ini)  
+    'out_dir'  :  directory to write the blast output files
+    yields the full blast commands.
+    """
 
     for q_fasta in q_fastas:
         q_name = filen(q_fasta)
@@ -52,7 +62,7 @@ def save_blast_info(out_dir, fomatdb, blast):
 
 
 def main(q_fastas, s_fastas, format_db, blast, out_dir):
-
+    # create the server.
     s = pp.Server()
     if not os.path.exists(out_dir): os.makedirs(out_dir)
     save_blast_info(out_dir, format_db, blast)
@@ -66,8 +76,7 @@ def main(q_fastas, s_fastas, format_db, blast, out_dir):
         # ("commands",) is a tuple of modules that will be needed for the job
         jobs.append(s.submit(consume, (c,), (), ("commands",)))
 
-    # now loop through and collect the jobs as they return
-    # as a cpu becomes available, pp magically adds a new job
+    # loop through and collect the jobs and any output as they return
     for j in jobs:
         command, output = j()
         print command
