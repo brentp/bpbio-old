@@ -41,6 +41,8 @@ cdef extern from "Python.h":
     int PyList_Append(object l, object i) except -1
     object PyList_New(int)
     cdef int PyList_SET_ITEM(object, int, object) except -1
+    void PyList_GetItem(object the_list, int the_index)
+
     cdef void Py_INCREF(void *)
     cdef object PyDict_GetItem(object d, object k)
     
@@ -49,11 +51,24 @@ cdef extern from "cblast_misc.c":
     int add_locs(char *, char *)
 
 cdef char * blast_format = "%s\t%s\t%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%e\t%f*%s\n"
+cdef char * dag_format = "%s\t%s\t%d\t%d\t%s\t%s\t%d\t%d\t%f\n"
 
 #cdef inline int set_list(object PyList, int idx, object obj) except -1:
 #    Py_INCREF(<PyObject *>obj)
 #    PyList_SET_ITEM(PyList, idx, obj)
 
+
+#def dag_array(dagf):
+#    cdef int qstart, qstop, sstart, sstop 
+#    cdef float score
+#    cdef char qchr[64]
+#    cdef char schr[64]
+#    cdef char qname[128]
+#    cdef char sname[128]
+#    
+#    recs = collections.defaultdict(list)
+#    fh = fopen(dagf, "r")
+#    while fscanf
 
 def pyaddlocs(inname, outname=None):
     """take a file name :inname: and add the global locs 
@@ -75,7 +90,8 @@ def pylocslist(*args):
         print add_locs(a, NULL)
 
 
-def _blast_array(blastf, maxkeep):
+
+def _blast_array(blastf, maxkeep, best_hit):
     cdef int qlen = 8, slen = 8, hlen, nmiss, ngap, qstart, qstop, sstart, sstop, icol = 0
     cdef float pct = 0.0, evalue = 0.0, bit = 0.0
     cdef char qname[128], sname[128]
@@ -92,6 +108,9 @@ def _blast_array(blastf, maxkeep):
         if strlen(sname) > slen: slen = strlen(sname)
 
         #key = qname + '_' + sname
+        # save some memorey. the best hit is usually reported first,
+        # and it removes double hits to the same q, s pair.
+        if best_hit and qname + '_' + sname in recs and recs[qname + '_' + sname][0][10] < evalue: continue
         PyList_Append(recs[qname + '_' + sname], [qname, sname, pct, hlen, nmiss, ngap, qstart, qstop, sstart, sstop, evalue, bit, None, False])
     fclose(fh)
 
@@ -109,6 +128,7 @@ def _blast_array(blastf, maxkeep):
     return arr, qlen, slen
 
 
+
 def blast_array(fi, dopickle=1, best_hit=1, maxkeep=6):
     file_name = 0
     if not isinstance(fi, list) and type(fi) != numpy.recarray:
@@ -122,7 +142,7 @@ def blast_array(fi, dopickle=1, best_hit=1, maxkeep=6):
                 arr = numpy.load(file_name)
                 return arr[arr['hit_rank'] == 0]
 
-        arr, qlen, slen = _blast_array(fi, maxkeep)
+        arr, qlen, slen = _blast_array(fi, maxkeep, best_hit)
         BLAST_TYPES[0] = 'S' + str(qlen)
         BLAST_TYPES[1] = 'S' + str(slen)
     else:
