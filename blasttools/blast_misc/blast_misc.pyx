@@ -17,6 +17,7 @@ BLAST_NAMES = ['query', 'subject', 'percent_id', 'hit_length', 'n_mismatch', \
     'n_gaps', 'qstart', 'qstop', 'sstart', 'sstop', 'eval', 'score','hit_rank','dup']
 
 BLAST_TYPES = ['S8', 'S8', 'f4', 'i4', 'i4', 'i4', 'i8', 'i8', 'i8', 'i8', 'f8', 'f8', 'i4', 'b1']
+BLAST_TYPES = ['S8', 'S8', 'f4', 'i4', 'i4', 'i4', 'i8', 'i8', 'i8', 'i8', 'f4', 'f4', 'i2', 'b1']
 
 
 cdef extern from "stdio.h":
@@ -110,8 +111,11 @@ def _blast_array(blastf, maxkeep, best_hit):
         #key = qname + '_' + sname
         # save some memorey. the best hit is usually reported first,
         # and it removes double hits to the same q, s pair.
-        if best_hit and qname + '_' + sname in recs and recs[qname + '_' + sname][0][10] < evalue: continue
-        PyList_Append(recs[qname + '_' + sname], [qname, sname, pct, hlen, nmiss, ngap, qstart, qstop, sstart, sstop, evalue, bit, None, False])
+        if best_hit and qname + '_' + sname in recs:
+            if recs[qname + '_' + sname][-1][10] <= evalue: continue
+            recs[qname + "_" + sname] = [[qname, sname, pct, hlen, nmiss, ngap, qstart, qstop, sstart, sstop, evalue, bit, None, False]]
+        else:
+            PyList_Append(recs[qname + '_' + sname], [qname, sname, pct, hlen, nmiss, ngap, qstart, qstop, sstart, sstop, evalue, bit, None, False])
     fclose(fh)
 
     arr = [] #PyList_New(0)
@@ -135,7 +139,8 @@ def blast_array(fi, dopickle=1, best_hit=1, maxkeep=6):
         if not os.path.exists(fi): return []
         file_name = fi + ".pickle"
 
-        if dopickle and os.path.exists(file_name):
+        if dopickle and os.path.exists(file_name) \
+                and os.stat(file_name).st_mtime >= os.stat(fi).st_mtime:
             if not best_hit:
                 return numpy.load(file_name)
             else:
@@ -154,10 +159,14 @@ def blast_array(fi, dopickle=1, best_hit=1, maxkeep=6):
         ra = arr
     else:
         ra = numpy.rec.array(arr, names=BLAST_NAMES, formats=BLAST_TYPES)
+    arr = None
+    import gc; gc.collect()
 
     if dopickle and file_name: ra.dump(file_name)
     # hit_rank of 0 is the best hit
-    if best_hit: ra = ra[ra['hit_rank'] == 0]
+    try:
+        if best_hit: ra = ra[ra['hit_rank'] == 0]
+    except: pass
     return ra
  
 def geneorder(fn, picklef=None, dups=set([]), field=None):
