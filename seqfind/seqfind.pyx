@@ -126,7 +126,7 @@ cdef inline int get_arc_dist(arc):
 cdef class BKTree:
     """
     a simple http://en.wikipedia.org/wiki/BK-tree
-    see test_tree() in this module for example usage.
+    see tests for example usage.
     takes a list of words and creates a tree that can be searched
     quickly.  search with tree.find("word", distance)
 
@@ -192,59 +192,3 @@ cdef class BKTree:
             arc_dist = get_arc_dist(arc)
             if dmin <= arc_dist <= dmax:
                 self._find(arc[0], word, thresh, results)
-
-                
-            
-
-def test_edit_distance():
-    print "testing..."
-    assert edit_distance("ab", "ba", 20) == 1
-    
-    tests = [["", ""], ["a", ""], ["", "a"], ["a", "a"], ["x", "a"],
-              ["aa", ""], ["", "aa"], ["aa", "aa"], ["ax", "aa"], ["a", "aa"], ["aa", "a"],
-              ["abcdef", ""], ["", "abcdef"], ["abcdef", "abcdef"],
-              ["vintner", "writers"], ["vintners", "writers"]];
-    expected = [0, 1, 1, 0, 1, 2, 2, 0, 1, 1, 1, 6, 6, 0, 5, 4] 
-    for i, (a, b) in enumerate(tests):
-        assert edit_distance(a, b, 100) == expected[i], (a, b, expected[i], edit_distance(a, b, 100))
-        assert edit_distance(a, b, 100) == edit_distance(b, a, 100)
-
-    transpositions = [("OT", "OST", 1), ("TO", "OST", 3), ("ab", "ba", 1), ("abc", "bac", 1)
-            , ("surgery", "survey", 2), ("asdf", "adsf", 1), ("asxxdf", "adxxsf", 2), ("aaaaaaaab", "aaaaaaaba", 1)]
-    for a, b, expected in transpositions:
-        assert edit_distance(a, b, 100) == expected, (a, b, edit_distance(a, b, 100), expected)
-        assert edit_distance(a, b, 100) == edit_distance(b, a, 100)
-    print 'done'
-
-    import random
-    import string
-    word = "".join([random.choice(string.letters) for x in range(10)])
-    w2 = word[:][:-2]
-    assert edit_distance(word, w2, 10) == 2
-    w2 = list(word[:])
-
-    w2[4], w2[5] = w2[5], w2[4]
-    w2 = "".join(w2)
-    assert edit_distance(word, w2, 100) < 2
-
-    print edit_distance("bzzcbczacd", "zzzzzzcacd", 100)
-
-
-def test_tree():
-    words = ("abcd", "def", "acdf", "gef", "wersdf", "asdfewd"
-            , "sdfwe", "sdfwef", "kljd", "oiouoij", "ououoji", "ouonkoj")
-
-    tree = BKTree(words)
-    print "made tree"
-
-    for i in range(6):
-        print i, "ddd", tree.find("ddd", i)
-
-def test_speed(n=500000):
-    print "timing..."
-    import time
-    t = time.time()
-    for i from 0 <= i < n:
-        edit_distance('i ehm a gude spehlar', 'i am a good speller', 100)
-    print "%i iterations in %f" % (n, time.time() - t)
-
