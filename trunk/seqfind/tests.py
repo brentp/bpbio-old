@@ -1,6 +1,6 @@
 #
 from seqfind import edit_distance
-from seqfind import BKTree
+from seqfind import BKTree, Word
 import time
 import sys
 
@@ -45,9 +45,23 @@ def test_tree():
 
     tree = BKTree(words)
     print "made tree"
+    print tree.nodes
 
     for i in range(6):
         print i, "ddd", tree.find("ddd", i)
+
+def test_words():
+    words = ("abcd", "def", "acdf", "gef", "wersdf", "asdfewd"
+            , "sdfwe", "sdfwef", "kljd", "oiouoij", "ououoji", "ouonkoj")
+
+    words = [Word(w, "asdf") for w in words]
+    print >> sys.stderr, "made word list"
+    tree = BKTree(words)
+    print >> sys.stderr, "made tree"
+    print tree.nodes
+
+    for i in range(6):
+        print i, "ddd", [(w.word, w.info ) for w in tree.find("ddd", i)]
 
 def test_speed(dict_file='/usr/share/dict/words', n=1000):
     import re
