@@ -143,10 +143,6 @@ cdef class BKTree:
     2 ['def']
     3 ['abcd', 'def', 'gef', 'acdf', 'kljd']
     """
-    """
-    TODO:
-    allow a tuple of [(info, word),...]
-    >>> words = [('some_name', "word"), 
 
     cdef object root
     cdef object nodes
