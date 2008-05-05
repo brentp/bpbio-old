@@ -115,10 +115,6 @@ cpdef int edit_distance(char *a, char *b, int limit):
     free(m2)
     return retval
 
-cdef inline int get_arc_dist(arc):
-    arcd = PyTuple_GET_ITEM(arc, 1)
-    Py_INCREF(arcd)
-    return arcd
 
 cdef class Word:
     cdef public char* word
