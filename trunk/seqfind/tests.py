@@ -1,6 +1,8 @@
 #
 from seqfind import edit_distance
 from seqfind import BKTree
+import time
+import sys
 
 
 def test_edit_distance():
@@ -47,44 +49,57 @@ def test_tree():
     for i in range(6):
         print i, "ddd", tree.find("ddd", i)
 
-def test_speed(n=500000):
-    print "timing..."
-    import time
+def test_speed(dict_file='/usr/share/dict/words', n=1000):
+    import re
+    print >>sys.stderr, "timing..."
+    words = [x.strip() for x in open(dict_file) if not re.search("\W", x.strip()) and len(x.strip()) > 2][:n]
     t = time.time()
-    for i in xrange(n):
-        edit_distance('i ehm a gude spehlar', 'i am a good speller', 100)
-    print "%i iterations in %f" % (n, time.time() - t)
+    for i,ww in enumerate(words):
+        w1 = words[i]
+        d = None
+        for j,ww in enumerate(words):
+            w2 = words[j]
+            if w1 == w2: continue
+            d = edit_distance(w1, w2, 1000)
+    print >> sys.stderr, "\n%i iterations in %.3f seconds of %i-sized tree\n" % (n**2, time.time() - t, n)
 
 
 def test_tree_dict(dict_file='/usr/share/dict/words'):
     import os
     import re
     if not os.path.exists(dict_file): return False
-    import time, sys
-    import random
+
     words = [x.strip() for x in open(dict_file) if not re.search("\W", x.strip()) and len(x.strip()) > 2]
-    random.shuffle(words)
 
     t0 = time.time()
-    print >>sys.stderr, "creating tree..."
+    print >>sys.stderr, "\ncreating tree with %i words..." % (len(words),)
     bt = BKTree(words)
     t1 = time.time()
     print >>sys.stderr, "time to create tree:", t1 - t0
-    find_words = ("word", "frank", "puddle", "alphabet", "fandango", "puzzle", "spectacular")
 
-    for fw in find_words:
-        for i in range(10):
+    find_words = ("word", "frank", "puddle", "alphabet", "fandango", "puzzle", "spectacular")
+    find_dists = (1, 1, 1, 3, 3, 1, 3)
+
+    for fd, fw in zip(find_dists, find_words):
+        for i in range(1, 10):
             found = bt.find(fw, i)
             if len(found) > 4:
                 print fw, "(" + str(i) + ") :", found
+                assert fd == i
                 break
 
     t2 = time.time()
     print >>sys.stderr, "time to search tree:", t2 - t1
 
+    
+    for w in words[:1000]:
+        bt.find(w, 2)
+    print >>sys.stderr, "time to search tree for all vs. all at distance == 2:", time.time() - t2
+
 def all():
     test_edit_distance()
     test_tree()
     test_speed()
+    test_tree_dict()
 
 

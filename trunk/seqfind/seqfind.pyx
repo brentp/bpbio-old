@@ -85,9 +85,9 @@ cpdef int edit_distance(char *a, char *b, int limit):
     if blen - alen >= limit:
         return blen - alen
 
-    cdef char *m1 = <char *>calloc(blen + 1, sizeof(char))
-    cdef char *m2 = <char *>malloc((blen + 1) * sizeof(char))
-    cdef char *m3 = <char *>malloc((blen + 1) * sizeof(char))
+    cdef char *m1 = <char *>calloc(blen + 2, sizeof(char))
+    cdef char *m2 = <char *>calloc(blen + 2, sizeof(char))
+    cdef char *m3 = <char *>calloc(blen + 2, sizeof(char))
     
     for i from 0 <= i <= blen:
         m2[i] = i 
@@ -110,11 +110,13 @@ cpdef int edit_distance(char *a, char *b, int limit):
         m1, m2 = m2, m1
         strcpy(m3, m2)
 
-    retval = m2[blen]
-    free(m3)
-    free(m1)
-    free(m2)
-    return retval
+    try:
+        retval = <int>m2[blen]
+        return retval
+    finally:
+        free(m3)
+        free(m1)
+        free(m2)
 
 cdef inline int get_arc_dist(arc):
     cdef int arcd
@@ -144,7 +146,7 @@ cdef class BKTree:
     3 ['abcd', 'def', 'gef', 'acdf', 'kljd']
     """
 
-    cdef object root
+    cdef char* root
     cdef object nodes
 
     def __init__(self, words):
