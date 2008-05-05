@@ -54,7 +54,7 @@ def test_words():
     words = ("abcd", "def", "acdf", "gef", "wersdf", "asdfewd"
             , "sdfwe", "sdfwef", "kljd", "oiouoij", "ououoji", "ouonkoj")
 
-    words = [Word(w, "asdf") for w in words]
+    words = [Word(w, {'something':"asdf", "asdf": [22, 33]}) for w in words]
     print >> sys.stderr, "made word list"
     tree = BKTree(words)
     print >> sys.stderr, "made tree"

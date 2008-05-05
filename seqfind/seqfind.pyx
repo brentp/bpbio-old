@@ -122,10 +122,10 @@ cdef inline int get_arc_dist(arc):
 
 cdef class Word:
     cdef public char* word
-    cdef public char* info
+    cdef public object info
     cdef public int distance
 
-    def __cinit__(self, char * word, char *info=NULL): #, char* info):
+    def __cinit__(self, char * word, object info=None): #, char* info):
         self.word = word
         self.info = info
 
@@ -142,23 +142,29 @@ cdef class BKTree:
     follows bearophiles code from here:
     http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/572156
 
-    >>> words = ("abcd", "def", "acdf", "gef", "wersdf", "asdfewd"
-    ...        , "sdfwe", "sdfwef", "kljd", "oiouoij", "ououoji", "ouonkoj")
+        >>> words = ("abcd", "def", "acdf", "gef", "wersdf", "asdfewd"
+        ...        , "sdfwe", "sdfwef", "kljd", "oiouoij", "ououoji", "ouonkoj")
 
-    >>> tree = BKTree(words)
-    >>> for i in range(1, 4):
-    ...     i, tree.find("ddd", i)
-    1 []
-    2 ['def']
-    3 ['abcd', 'def', 'gef', 'acdf', 'kljd']
+        >>> tree = BKTree(words)
+        >>> for i in range(1, 4):
+        ...     i, tree.find("ddd", i)
+        1 []
+        2 ['def']
+        3 ['abcd', 'def', 'gef', 'acdf', 'kljd']
 
     the words can also be a Word() object. which takes the word to
-    compare, and any info string:
+    compare, and any python object:
 
-    >>> words = [Word("asdf", "this is some info), Word("asfd", "some other info")]
-    >>> tree = BKTree(words)
+        >>> words = [Word("asdf", {'info':"this is some info})
+        ...            , Word("asfd", {'zombies': [24, 'g']})]
+        >>> tree = BKTree(words)
 
     this is useful for storing any info that goes with the object.
+        >>> f = tree.find("asdf, 0)
+        >>> f.info['info']
+        'zombies'
+        >>> f.info['zombies']
+        [24, 'g']
     """
 
     cdef Word root
