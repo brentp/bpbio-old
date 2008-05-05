@@ -92,7 +92,7 @@ def test_tree_dict(dict_file='/usr/share/dict/words'):
     print >>sys.stderr, "time to search tree:", t2 - t1
 
     
-    for w in words[:1000]:
+    for w in words[:100]:
         bt.find(w, 2)
     print >>sys.stderr, "time to search tree for all vs. all at distance == 2:", time.time() - t2
 

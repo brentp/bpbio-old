@@ -28,7 +28,6 @@ cdef extern from "stdlib.h":
     char * strcpy(char *a, char *b) 
 
 cdef extern from "Python.h":
-    void PyList_Append(object, object)
     object PyTuple_GET_ITEM(object, int)
     void Py_INCREF(object)
 
@@ -66,9 +65,9 @@ cpdef int edit_distance(char *a, char *b, int limit):
 
 
 
-    cdef int alen = strlen(a), blen = strlen(b)
+    cdef int alen = strlen(a), blen = strlen(b), retval
     cdef char *ctmp
-    cdef size_t i, j, retval
+    cdef size_t i, j
     cdef size_t achr, bchr #, cost
      
     if strcmp(a, b) == 0:
@@ -87,7 +86,7 @@ cpdef int edit_distance(char *a, char *b, int limit):
 
     cdef char *m1 = <char *>calloc(blen + 2, sizeof(char))
     cdef char *m2 = <char *>calloc(blen + 2, sizeof(char))
-    cdef char *m3 = <char *>calloc(blen + 2, sizeof(char))
+    cdef char *m3 = <char *>malloc((blen + 2) * sizeof(char))
     
     for i from 0 <= i <= blen:
         m2[i] = i 
@@ -110,17 +109,14 @@ cpdef int edit_distance(char *a, char *b, int limit):
         m1, m2 = m2, m1
         strcpy(m3, m2)
 
-    try:
-        retval = <int>m2[blen]
-        return retval
-    finally:
-        free(m3)
-        free(m1)
-        free(m2)
+    retval = <int>m2[blen]
+    free(m3)
+    free(m1)
+    free(m2)
+    return retval
 
 cdef inline int get_arc_dist(arc):
-    cdef int arcd
-    arcd = <int>PyTuple_GET_ITEM(arc, 1)
+    arcd = PyTuple_GET_ITEM(arc, 1)
     Py_INCREF(arcd)
     return arcd
 
@@ -157,8 +153,8 @@ cdef class BKTree:
             if w in self.nodes: continue
             self.addNode(root, w)
 
-    cpdef addNode(self, char *root, char *word):
-        cdef int d = edit_distance(root, word, 1000)
+    cpdef addNode(self, root, word):
+        cdef int d = edit_distance(<char *>root, <char *>word, 1000)
         cdef int arc_dist
         if d == 0: return None
 
@@ -175,8 +171,8 @@ cdef class BKTree:
             self.nodes[root].append((word, d))
 
 
-    def find(self, char *word, thresh):
-        cdef object results = []
+    def find(self, char *word, int thresh):
+        results = []
         self._find(self.root, word, thresh, results)
         return results
 
@@ -185,6 +181,7 @@ cdef class BKTree:
         cdef int dmin = d - thresh
         cdef int dmax = d + thresh
         cdef int arc_dist
+        cdef object new_root
 
         if d <= thresh:
             results.append(aroot)
@@ -193,4 +190,7 @@ cdef class BKTree:
         for arc in self.nodes[aroot]:
             arc_dist = get_arc_dist(arc)
             if dmin <= arc_dist <= dmax:
-                self._find(arc[0], word, thresh, results)
+                new_root = PyTuple_GET_ITEM(arc, 0)
+                Py_INCREF(new_root)
+                self._find(new_root, word, thresh, results)
+
