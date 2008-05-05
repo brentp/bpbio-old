@@ -55,7 +55,36 @@ def test_speed(n=500000):
         edit_distance('i ehm a gude spehlar', 'i am a good speller', 100)
     print "%i iterations in %f" % (n, time.time() - t)
 
+
+def test_tree_dict(dict_file='/usr/share/dict/words'):
+    import os
+    import re
+    if not os.path.exists(dict_file): return False
+    import time, sys
+    import random
+    words = [x.strip() for x in open(dict_file) if not re.search("\W", x.strip()) and len(x.strip()) > 2]
+    random.shuffle(words)
+
+    t0 = time.time()
+    print >>sys.stderr, "creating tree..."
+    bt = BKTree(words)
+    t1 = time.time()
+    print >>sys.stderr, "time to create tree:", t1 - t0
+    find_words = ("word", "frank", "puddle", "alphabet", "fandango", "puzzle", "spectacular")
+
+    for fw in find_words:
+        for i in range(10):
+            found = bt.find(fw, i)
+            if len(found) > 4:
+                print fw, "(" + str(i) + ") :", found
+                break
+
+    t2 = time.time()
+    print >>sys.stderr, "time to search tree:", t2 - t1
+
 def all():
     test_edit_distance()
     test_tree()
     test_speed()
+
+
