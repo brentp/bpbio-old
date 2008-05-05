@@ -120,6 +120,15 @@ cdef inline int get_arc_dist(arc):
     Py_INCREF(arcd)
     return arcd
 
+cdef class Word:
+    cdef public char* word
+    cdef public char* info
+    cdef public int distance
+
+    def __cinit__(self, char * word, char *info=NULL): #, char* info):
+        self.word = word
+        self.info = info
+
 
 cdef class BKTree:
     """
@@ -142,55 +151,55 @@ cdef class BKTree:
     3 ['abcd', 'def', 'gef', 'acdf', 'kljd']
     """
 
-    cdef char* root
-    cdef object nodes
+    cdef Word root
+    cdef public object nodes
 
     def __init__(self, words):
-        root = words[0]
+        root = Word(words[0])
+
+        cdef Word aword
         self.root = root
         self.nodes = {root: []}
         for w in words[1:]:
-            if w in self.nodes: continue
-            self.addNode(root, w)
+            aword = Word(w)
+            if aword in self.nodes: continue
+            self.addNode(root, aword)
 
-    cpdef addNode(self, root, word):
-        cdef int d = edit_distance(<char *>root, <char *>word, 1000)
-        cdef int arc_dist
+    cdef addNode(self, Word root, Word word):
+        cdef int d = edit_distance(root.word, word.word, 1000)
+
         if d == 0: return None
 
+        cdef Word arc
         for arc in self.nodes[root]:
-            arc_dist = get_arc_dist(arc)
-
-            if d != arc_dist: continue
-            self.addNode(arc[0], word)
+            if d != arc.distance: continue
+            self.addNode(arc, word)
             break
 
         else:
             if not word in self.nodes:
                 self.nodes[word] = []
-            self.nodes[root].append((word, d))
+            word.distance = d
+            self.nodes[root].append(word)
 
 
-    def find(self, char *word, int thresh):
+    cpdef find(self, char *word, int thresh):
         results = []
-        self._find(self.root, word, thresh, results)
+        self._find(self.root, Word(word), thresh, results)
         return results
 
-    cdef void _find(self, char *aroot, char *word, int thresh, results):
-        cdef int d = edit_distance(word, aroot, 1000)
+    cdef void _find(self, Word aroot, Word word, int thresh, results):
+        cdef int arc_dist, d = edit_distance(word.word, aroot.word, 1000)
         cdef int dmin = d - thresh
         cdef int dmax = d + thresh
-        cdef int arc_dist
-        cdef object new_root
+        cdef Word arc
 
         if d <= thresh:
             results.append(aroot)
 
         # todo PyList_GetItem...
         for arc in self.nodes[aroot]:
-            arc_dist = get_arc_dist(arc)
+            arc_dist = arc.distance
             if dmin <= arc_dist <= dmax:
-                new_root = PyTuple_GET_ITEM(arc, 0)
-                Py_INCREF(new_root)
-                self._find(new_root, word, thresh, results)
+                self._find(arc, word, thresh, results)
 

@@ -84,12 +84,13 @@ def test_tree_dict(dict_file='/usr/share/dict/words'):
         for i in range(1, 10):
             found = bt.find(fw, i)
             if len(found) > 4:
-                print fw, "(" + str(i) + ") :", found
+                print fw, "(" + str(i) + ") :", [w.word for w in found]
                 assert fd == i
                 break
 
     t2 = time.time()
     print >>sys.stderr, "time to search tree:", t2 - t1
+    #print bt.nodes
 
     
     for w in words[:100]:
