@@ -129,6 +129,8 @@ cdef class Word:
         self.word = word
         self.info = info
 
+    def __repr__(self):
+        return "<Word. {'word': '%s' }>" % self.word
 
 cdef class BKTree:
     """
@@ -149,19 +151,38 @@ cdef class BKTree:
     1 []
     2 ['def']
     3 ['abcd', 'def', 'gef', 'acdf', 'kljd']
+
+    the words can also be a Word() object. which takes the word to
+    compare, and any info string:
+
+    >>> words = [Word("asdf", "this is some info), Word("asfd", "some other info")]
+    >>> tree = BKTree(words)
+
+    this is useful for storing any info that goes with the object.
     """
 
     cdef Word root
     cdef public object nodes
 
     def __init__(self, words):
-        root = Word(words[0])
+        cdef int is_word = 0
+        cdef Word root 
+
+        if isinstance(words[0], Word):
+            is_word = 1
+            root = words[0]
+        else:
+            root = Word(words[0])
+        
 
         cdef Word aword
         self.root = root
         self.nodes = {root: []}
         for w in words[1:]:
-            aword = Word(w)
+            if is_word == 0:
+                aword = Word(w)
+            else: 
+                aword = w
             if aword in self.nodes: continue
             self.addNode(root, aword)
 
