@@ -69,7 +69,7 @@ cpdef int edit_distance(char *a, char *b, int limit):
     cdef int alen = strlen(a), blen = strlen(b)
     cdef char *ctmp
     cdef size_t i, j, retval
-    cdef size_t achr, bchr, cost
+    cdef size_t achr, bchr #, cost
      
     if strcmp(a, b) == 0:
         return 0
@@ -86,20 +86,20 @@ cpdef int edit_distance(char *a, char *b, int limit):
         return blen - alen
 
     cdef char *m1 = <char *>calloc(blen + 1, sizeof(char))
-    cdef char *m2 = <char *>calloc(blen + 1, sizeof(char))
-    cdef char *m3 = <char *>calloc(blen + 1, sizeof(char))
+    cdef char *m2 = <char *>malloc((blen + 1) * sizeof(char))
+    cdef char *m3 = <char *>malloc((blen + 1) * sizeof(char))
     
     for i from 0 <= i <= blen:
-        m2[i] = i
+        m2[i] = i 
 
     for i from 1 <= i <= alen:
         m1[0] = i + 1
         achr = a[i - 1]
         for j from 1 <= j <= blen:
             bchr = b[j- 1]
-            cost = 0 if achr == bchr else 1
-            #if achr == bchr:
-            if cost == 0:
+            #cost = 0 if achr == bchr else 1
+            if achr == bchr:
+            #if cost == 0:
                 m1[j] = m2[j - 1]
             else:
                 m1[j] = 1 + imin(m1[j - 1], m2[j - 1], m2[j])
@@ -143,6 +143,10 @@ cdef class BKTree:
     2 ['def']
     3 ['abcd', 'def', 'gef', 'acdf', 'kljd']
     """
+    """
+    TODO:
+    allow a tuple of [(info, word),...]
+    >>> words = [('some_name', "word"), 
 
     cdef object root
     cdef object nodes
