@@ -38,6 +38,17 @@ def test_edit_distance():
 
     print edit_distance("bzzcbczacd", "zzzzzzcacd", 100)
 
+def test_same_words():
+    words = ("abcd", "def", "acdf", "gef", "wersdf", "asdfewd"
+            ,"abcd", "def", "acdf", "gef", "wersdf", "asdfewd")
+    t = BKTree(words)
+    abcds = [w.word for w in t.find("abcd", 0)] 
+    assert abcds[0] == abcds[1] == "abcd", abcds
+    more = [w.word for w in t.find("abcd", 2)] 
+    assert more.count("abcd") == 2, more
+    assert more.count("acdf") == 2, more
+    
+
 
 def test_tree():
     words = ("abcd", "def", "acdf", "gef", "wersdf", "asdfewd"
@@ -117,4 +128,5 @@ def all():
     test_speed()
     test_tree_dict()
 
-
+if __name__ == "__main__":
+    test_same_words()
