@@ -40,7 +40,7 @@ cdef inline size_t imin(int a, int b, int c):
         return c
     return b
 
-
+    
 cpdef int edit_distance(char *a, char *b, int limit):
     """
     the damerau-levenshtein distance:
@@ -185,30 +185,29 @@ cdef class BKTree:
             if aword in self.nodes: continue
             self.addNode(root, aword)
 
-    cdef addNode(self, Word root, Word word):
+    cdef void addNode(BKTree self, Word root, Word word):
         cdef int d = edit_distance(root.word, word.word, 1000)
-
-        if d == 0: return None
-
         cdef Word arc
-        for arc in self.nodes[root]:
-            if d != arc.distance: continue
-            self.addNode(arc, word)
-            break
 
-        else:
-            if not word in self.nodes:
-                self.nodes[word] = []
-            word.distance = d
-            self.nodes[root].append(word)
+        if d != 0: 
+            for arc in self.nodes[root]:
+                if d != arc.distance: continue
+                self.addNode(arc, word)
+                break
+
+            else:
+                if not word in self.nodes:
+                    self.nodes[word] = []
+                word.distance = d
+                self.nodes[root].append(word)
 
 
     cpdef find(self, char *word, int thresh):
-        results = []
+        cdef list results = []
         self._find(self.root, Word(word), thresh, results)
         return results
 
-    cdef void _find(self, Word aroot, Word word, int thresh, results):
+    cdef void _find(BKTree self, Word aroot, Word word, int thresh, list results):
         cdef int arc_dist, d = edit_distance(word.word, aroot.word, 1000)
         cdef int dmin = d - thresh
         cdef int dmax = d + thresh
