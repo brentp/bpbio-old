@@ -189,17 +189,17 @@ cdef class BKTree:
         cdef int d = edit_distance(root.word, word.word, 1000)
         cdef Word arc
 
-        if d != 0: 
-            for arc in self.nodes[root]:
-                if d != arc.distance: continue
-                self.addNode(arc, word)
-                break
+        #if d != 0: 
+        for arc in self.nodes[root]:
+            if d != arc.distance: continue
+            self.addNode(arc, word)
+            break
 
-            else:
-                if not word in self.nodes:
-                    self.nodes[word] = []
-                word.distance = d
-                self.nodes[root].append(word)
+        else:
+            if not word in self.nodes:
+                self.nodes[word] = []
+            word.distance = d
+            self.nodes[root].append(word)
 
 
     cpdef find(self, char *word, int thresh):
