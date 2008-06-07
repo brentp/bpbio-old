@@ -95,9 +95,10 @@ def pylocslist(*args):
 def _blast_array(blastf, maxkeep, best_hit):
     cdef int qlen = 8, slen = 8, hlen, nmiss, ngap, qstart, qstop, sstart, sstop, icol = 0
     cdef float pct = 0.0, evalue = 0.0, bit = 0.0
-    cdef char qname[128], sname[128]
+    cdef char qname[160], sname[160]
     cdef char *tmp
     cdef FILE *fh
+    cdef list arr
 
     if maxkeep == None: maxkeep = 6
 
@@ -107,6 +108,7 @@ def _blast_array(blastf, maxkeep, best_hit):
     while fscanf(fh, blast_format, qname, sname, &pct, &hlen, &nmiss, &ngap, &qstart, &qstop, &sstart, &sstop, &evalue, &bit ) != EOF:
         if strlen(qname) > qlen: qlen = strlen(qname)
         if strlen(sname) > slen: slen = strlen(sname)
+        assert strlen(qname) <= 160
 
         #key = qname + '_' + sname
         # save some memorey. the best hit is usually reported first,
@@ -122,14 +124,14 @@ def _blast_array(blastf, maxkeep, best_hit):
     # this is faster then using k,v in rec.items()
     for k in sorted(recs, key=operator.itemgetter(1)):
         
-        v = PyDict_GetItem(recs, k)  # was: v = recs[k]
+        v = recs[k]
         icol = 0
         for li in sorted(v, key=operator.itemgetter(10))[:maxkeep]:
             # set the first to have hit_rank=0
             li[12] = icol
             icol += 1
-            PyList_Append(arr, li)
-    return arr, qlen, slen
+            arr.append(li)
+    return (arr, qlen, slen)
 
 
 
