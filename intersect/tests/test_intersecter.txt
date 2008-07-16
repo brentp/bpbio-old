@@ -1,0 +1,126 @@
+    >>> from intersection import Intersecter, Feature, distance
+
+Feature
+-------
+
+features are just things with a start, stop, and (optional) strand.
+
+make some fake features...
+    >>> starts  = [x for x in range(1, 100, 10)]
+    >>> stops   = [s + 4 for s in starts]
+    >>> strands = [ i % 2 == 0 and 1 or -1 for i in range(len(starts))]
+
+the feature class:
+    >>> feats = [Feature(start, stop, strand) for (start, stop, strand) in zip(starts, stops, strands)]
+
+and potentially a name:
+    >>> Feature(1001, 1003, strand=-1, name="fred")
+    Feature(1001, 1003, strand=-1, name="fred")
+
+and any other python object in the info keyword
+    >>> Feature(1001, 1003, strand=-1, info={"chr": 12, "function": "transcription factor"})
+    Feature(1001, 1003, strand=-1, {'function': 'transcription factor', 'chr': 12})
+
+
+
+intersecter
+===========
+
+    >>> inter = Intersecter()
+    >>> for feat in feats:
+    ...     inter.add_interval(feat)
+    >>> inter                                  #doctest: +ELLIPSIS
+    <intersection.Intersecter object at ...>
+
+
+    
+
+search 
+------
+
+find
+++++
+    >>> inter.find(23, 33)
+    [Feature(21, 25, strand=1), Feature(31, 35, strand=-1)]
+
+left
+++++
+    >>> inter.left(Feature(6, 100))
+    [Feature(1, 5, strand=1)]
+
+right
++++++
+    >>> inter.right(feats[3])
+    [Feature(41, 45, strand=1)]
+
+results are sorted by  'stop' for .left() and 'start' for .right()
+    >>> inter.left(Feature(60, 100), n=3)
+    [Feature(51, 55, strand=-1), Feature(41, 45, strand=1), Feature(31, 35, strand=-1)]
+
+
+will only return as many results as available.
+    >>> inter.left(Feature(60, 100), n=300)
+    [Feature(51, 55, strand=-1), Feature(41, 45, strand=1), Feature(31, 35, strand=-1), Feature(21, 25, strand=1), Feature(11, 15, strand=-1), Feature(1, 5, strand=1)]
+
+up/downstream
++++++++++++++
+
+up/downstream methods return neighbors from a direction dependent on the feature passed in.
+downstream and right are identical for a feature with strand == 1
+
+    >>> inter.right(Feature(53, 66, strand=1), n=1) == inter.downstream(Feature(53, 66, strand=1), n=1)
+    True
+
+like wise, upstream and _right_ are identical for a feature with strand == -1
+
+    >>> inter.right(Feature(53, 66, strand=-1), n=1) == inter.upstream(Feature(53, 66, strand=-1), n=1)
+    True
+
+
+    >>> feats[3], feats[4]
+    (Feature(31, 35, strand=-1), Feature(41, 45, strand=1))
+
+    >>> inter.right(feats[3])
+    [Feature(41, 45, strand=1)]
+
+    >>> inter.left(feats[4])
+    [Feature(31, 35, strand=-1)]
+
+    >>> inter.upstream(feats[3])[0]
+    Feature(41, 45, strand=1)
+
+    >>> inter.upstream(feats[4])[0]
+    Feature(31, 35, strand=-1)
+
+
+results are returned in order of distance from the query feature.
+    >>> inter.upstream(feats[4], n=100)
+    [Feature(31, 35, strand=-1), Feature(21, 25, strand=1), Feature(11, 15, strand=-1), Feature(1, 5, strand=1)]
+
+    >>> inter.upstream(feats[3], n=2)
+    [Feature(41, 45, strand=1), Feature(51, 55, strand=-1)]
+
+
+neighbors
++++++++++
+
+    >>> inter.nearest_neighbors(Feature(21, 22))
+    [Feature(21, 25, strand=1)]
+
+    >>> inter.nearest_neighbors(Feature(21, 26), n=3)
+    [Feature(21, 25, strand=1), Feature(31, 35, strand=-1), Feature(11, 15, strand=-1)]
+
+if there are many features that are equidistant from the query feature, they are all returned, 
+even if the # is greater then the requested n
+
+    >>> res = inter.nearest_neighbors(Feature(21, 25), n=2)
+    >>> len(res)
+    3
+
+we asked for 2, but the 2nd and 3rd are at the same distance...
+    >>> [distance(Feature(21, 25), r) for r in res]
+    [0, 6, 6]
+
+    >>> res
+    [Feature(21, 25, strand=1), Feature(11, 15, strand=-1), Feature(31, 35, strand=-1)]
+

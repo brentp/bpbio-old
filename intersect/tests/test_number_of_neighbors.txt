@@ -1,0 +1,100 @@
+tests to make sure the left, right, upstream, downstream, nearest_neighbors return the correct number of results.
+
+    >>> from intersection import Intersecter, Feature
+    >>> intersecter = Intersecter()
+
+    >>> intersecter.add_interval(Feature(5, 9, name="a"))
+    >>> intersecter.add_interval(Feature(5, 10, name="a"))
+    >>> intersecter.add_interval(Feature(5, 10, name="b"))
+    >>> intersecter.add_interval(Feature(5, 10, name="c"))
+    >>> intersecter.add_interval(Feature(5, 11, name="d"))
+
+    left/right
+    ++++++++++
+    >>> intersecter.left(Feature(11, 11))
+    [Feature(5, 10, name="a"), Feature(5, 10, name="b"), Feature(5, 10, name="c")]
+    >>> intersecter.left(Feature(11, 11), n=3)
+    [Feature(5, 10, name="a"), Feature(5, 10, name="b"), Feature(5, 10, name="c")]
+    >>> intersecter.left(Feature(11, 11), n=4)
+    [Feature(5, 10, name="a"), Feature(5, 10, name="b"), Feature(5, 10, name="c"), Feature(5, 9, name="a")]
+
+    >>> intersecter.left(Feature(10, 10), n=100)
+    [Feature(5, 9, name="a")]
+
+    
+have to return everything as they are all the same distance.
+    >>> intersecter.right(Feature(4,4))
+    [Feature(5, 9, name="a"), Feature(5, 10, name="a"), Feature(5, 10, name="b"), Feature(5, 10, name="c"), Feature(5, 11, name="d")]
+
+nothing strictly to the right.
+    >>> intersecter.right(Feature(5, 5))
+    []
+
+
+    up/downstream
+    +++++++++++++
+    >>> intersecter.upstream(Feature(11, 12, strand=1))
+    [Feature(5, 10, name="a"), Feature(5, 10, name="b"), Feature(5, 10, name="c")]
+    
+
+    nearest neighbors
+    +++++++++++++++++
+again has to return everything as all the same distance...
+    >>> intersecter.nearest_neighbors(Feature(1, 2))
+    [Feature(5, 9, name="a"), Feature(5, 10, name="a"), Feature(5, 10, name="b"), Feature(5, 10, name="c"), Feature(5, 11, name="d")]
+
+    >>> intersecter.add_interval(Feature(2, 3, name="e"))
+    >>> intersecter.nearest_neighbors(Feature(1, 2))
+    [Feature(2, 3, name="e")]
+
+test insort
+    >>> intersecter.add_interval(Feature(2, 3, name="f"), insort=True)
+    >>> intersecter.nearest_neighbors(Feature(1, 2))
+    [Feature(2, 3, name="f"), Feature(2, 3, name="e")]
+
+
+left is most complicated internally, add extra checks here...
+
+    >>> ii = Intersecter()
+    >>> for i in range(10):
+    ...    ii.add_interval(Feature(i, i)) 
+
+
+    >>> ii.left(Feature(5, 5), n=1)
+    [Feature(4, 4)]
+
+    >>> ii.left(Feature(5, 5), n=5)
+    [Feature(4, 4), Feature(3, 3), Feature(2, 2), Feature(1, 1), Feature(0, 0)]
+
+    >>> ii.add_interval(Feature(2, 10))
+    >>> ii.left(Feature(5, 5), n=1)
+    [Feature(4, 4)]
+
+    >>> ii.left(Feature(1, 1), n=1)
+    [Feature(0, 0)]
+
+    >>> ii.right(Feature(1, 1), n=2)
+    [Feature(2, 2), Feature(2, 10)]
+
+
+    >>> ii.add_interval(Feature(3, 3))
+    >>> ii.add_interval(Feature(3, 10))
+    >>> ii.add_interval(Feature(2, 10))
+    >>> ii.left(Feature(4, 4))
+    [Feature(3, 3), Feature(3, 3)]
+
+    >>> ii.add_interval(Feature(0, 3))
+    >>> ii.left(Feature(4, 4))
+    [Feature(0, 3), Feature(3, 3), Feature(3, 3)]
+
+    >>> ii.right(Feature(0, 1))
+    [Feature(2, 2), Feature(2, 10), Feature(2, 10)]
+
+    >>> ii.right(Feature(0, 1), n=4)
+    [Feature(2, 2), Feature(2, 10), Feature(2, 10), Feature(3, 3), Feature(3, 3), Feature(3, 10)]
+
+    >>> ii.right(Feature(0, 2), n=4)
+    [Feature(3, 3), Feature(3, 3), Feature(3, 10), Feature(4, 4)]
+    >>> ii.left(Feature(5, 5), n=4)
+    [Feature(4, 4), Feature(0, 3), Feature(3, 3), Feature(3, 3)]
+
