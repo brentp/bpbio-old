@@ -18,7 +18,7 @@ it cant save the exact interval:
     >>> b12 = dumps(1, 2)
     >>> b34 = dumps(3, 4)
     >>> b12, b34
-    ('00000000000000000000000', '000000000000000000000011')
+    ('0000000000000000000000000', '00000000000000000000000011')
 
 
     >>> b12 < b34
@@ -36,14 +36,14 @@ Must always use <= then compare the intervals directly
     >>> a = dumps(40000, 70000)
     >>> b = dumps(80000, 90000)
     >>> a, b
-    ('0000000', '0000000111')
+    ('000000000', '000000000111')
 
 
     >>> loads(a), loads(b)
     ((0, 131072), (114688, 131072))
 
 """
-def dumps(imin, imax, rng=2**24):
+def dumps(imin, imax, rng=2**26):
     """take a start (imin) and stop (imax)
     and convert to a representation that indicates
     position and size of the interval. suitable for
@@ -51,7 +51,7 @@ def dumps(imin, imax, rng=2**24):
         >>> a = dumps(40000, 70000)
         >>> b = dumps(80000, 90000)
         >>> a, b
-        ('0000000', '0000000111')
+        ('000000000', '000000000111')
 
     """
 
@@ -67,10 +67,10 @@ def dumps(imin, imax, rng=2**24):
     return ''.join(ilist[:-1])
 
 
-def loads(hashed, rng=2**24):
+def loads(hashed, rng=2**26):
     """given a hashed interval, return the smallest interval
     that contains it:
-    >>> a, b = ('0000000', '0000000111')
+    >>> a, b = ('000000000', '000000000111')
     >>> loads(a), loads(b)
     ((0, 131072), (114688, 131072))
 
