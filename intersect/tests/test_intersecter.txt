@@ -30,7 +30,7 @@ intersecter
     >>> for feat in feats:
     ...     inter.add_interval(feat)
     >>> inter                                  #doctest: +ELLIPSIS
-    <intersection.Intersecter object at ...>
+    <....Intersecter object at ...>
 
 
     

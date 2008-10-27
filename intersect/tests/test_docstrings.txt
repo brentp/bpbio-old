@@ -75,7 +75,7 @@ Intersecter
     >>> intersecter.left(Feature(0, 1))
     []
     >>> intersecter.left(Feature(11, 12))
-    [Feature(3, 7, strand=1)]
+    [Feature(0, 10, strand=-1)]
 
 
     up/downstream
@@ -86,7 +86,7 @@ Intersecter
 
     If the strand is -1, then upstream is right, downstream is left.
     >>> intersecter.upstream(Feature(11, 12, strand=1))
-    [Feature(3, 7, strand=1)]
+    [Feature(0, 10, strand=-1)]
     >>> intersecter.upstream(Feature(11, 12, strand=-1))
     [Feature(13, 50, strand=1)]
 
