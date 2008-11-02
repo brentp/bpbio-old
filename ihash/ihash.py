@@ -1,5 +1,5 @@
 """
-    >>> from interval_hash import dumps, loads
+    >>> from ihash import dumps, loads
 
     >>> loads(dumps(0, 32))
     (0, 32)
@@ -45,6 +45,8 @@ Must always use <= then compare the intervals directly
    >>> loads(dumps(15993504, 15993514, 2**24), 2**24)
    (15993472, 15993536)
 
+   >>> loads(dumps(2, 2))
+   (0, 2)
 """
 def dumps(imin, imax, rng=2**26):
     """take a start (imin) and stop (imax)
@@ -60,19 +62,19 @@ def dumps(imin, imax, rng=2**26):
 
     ilist = []
     i0 = i1 = '0'
-    dist = imax - imin
     rng >>= 1
     mid = rng
-    while 1:
-        i0 = imin <= mid and '0' or '1'
-        i1 = imax <= mid and '0' or '1'
-        if i0 != i1: break
+    while rng > 1:
         rng >>=1
-        mid += (i1 == '0') and -rng or rng
-        ilist.append(i0)
-
+        if imin <= mid and imax <= mid:
+            mid -= rng
+            ilist.append('0')
+        elif imin > mid and imax > mid:
+            mid += rng
+            ilist.append('1')
+        else:
+            break
     return ''.join(ilist)
-
 
 def loads(hashed, rng=2**26):
     """given a hashed interval, return the smallest interval
@@ -91,7 +93,15 @@ def loads(hashed, rng=2**26):
         else: imin += rng; 
     return (imin, imax)
 
+def precision(length, rng=2**26):
+    return rng >> length
+
+try:
+    from _ihash import dumps, loads
+except:
+    pass
 
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
+
