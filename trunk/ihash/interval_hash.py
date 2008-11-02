@@ -18,7 +18,7 @@ it cant save the exact interval:
     >>> b12 = dumps(1, 2)
     >>> b34 = dumps(3, 4)
     >>> b12, b34
-    ('0000000000000000000000000', '00000000000000000000000011')
+    ('0000000000000000000000000', '0000000000000000000000001')
 
 
     >>> b12 < b34
@@ -36,11 +36,14 @@ Must always use <= then compare the intervals directly
     >>> a = dumps(40000, 70000)
     >>> b = dumps(80000, 90000)
     >>> a, b
-    ('000000000', '000000000111')
-
+    ('000000000', '00000000010')
 
     >>> loads(a), loads(b)
-    ((0, 131072), (114688, 131072))
+    ((0, 131072), (65536, 98304))
+
+
+   >>> loads(dumps(15993504, 15993514, 2**24), 2**24)
+   (15993472, 15993536)
 
 """
 def dumps(imin, imax, rng=2**26):
@@ -51,20 +54,24 @@ def dumps(imin, imax, rng=2**26):
         >>> a = dumps(40000, 70000)
         >>> b = dumps(80000, 90000)
         >>> a, b
-        ('000000000', '000000000111')
+        ('000000000', '00000000010')
 
     """
 
     ilist = []
     i0 = i1 = '0'
     dist = imax - imin
-    while i0 == i1 and rng >= dist:
-        rng >>= 1
-        i0 = imin <= rng and '0' or '1'
-        i1 = imax <= rng and '0' or '1'
+    rng >>= 1
+    mid = rng
+    while 1:
+        i0 = imin <= mid and '0' or '1'
+        i1 = imax <= mid and '0' or '1'
+        if i0 != i1: break
+        rng >>=1
+        mid += (i1 == '0') and -rng or rng
         ilist.append(i0)
 
-    return ''.join(ilist[:-1])
+    return ''.join(ilist)
 
 
 def loads(hashed, rng=2**26):
@@ -78,12 +85,10 @@ def loads(hashed, rng=2**26):
 
 
     imin, imax = 0, rng
-    
     for io in hashed:
         rng >>= 1
-        if io == '0': imax-= rng
-        else: imin += rng 
-        #print imin, imax
+        if io == '0': imax-= rng;
+        else: imin += rng; 
     return (imin, imax)
 
 
