@@ -1,12 +1,14 @@
 class IntervalTree(object):
     __slots__ = ('intervals', 'left', 'right', 'center')
 
-    def __init__(self, intervals, depth=16, minbucket=128, _extent=None):
+    def __init__(self, intervals, depth=16, minbucket=96, _extent=None, maxbucket=4096):
         """\
         `intervals` a list of intervals *with start and stop* attributes.
-        `depth` the depth of the tree
+        `depth`     the depth of the tree
         `minbucket` if any node in the tree has fewer than minbucket
                     elements, make it a leaf node
+        `maxbucket` even it at specifined `depth`, if the number of intervals >
+                    maxbucket, split the node, make the tree deeper.
 
         depth and minbucket usually do not need to be changed. if
         dealing with large numbers (> 1M) of intervals, the depth could
@@ -16,7 +18,7 @@ class IntervalTree(object):
 
          >>> ivals = [Interval(2, 3), Interval(1, 8), Interval(3, 6)]
          >>> tree = IntervalTree(ivals)
-         >>> tree.find(1, 2)
+         >>> sorted(tree.find(1, 2))
          [Interval(2, 3), Interval(1, 8)]
 
         this provides an extreme and satisfying performance improvement
@@ -28,7 +30,7 @@ class IntervalTree(object):
         """ 
 
         depth -= 1
-        if depth == 0 or len(intervals) < minbucket:
+        if (depth == 0 or len(intervals) < minbucket) and len(intervals) > maxbucket:
             self.intervals = intervals
             self.left = self.right = None
             return 
