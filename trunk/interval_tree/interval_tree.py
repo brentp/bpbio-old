@@ -43,9 +43,9 @@ class IntervalTree(object):
         
 
         for interval in intervals:
-            if interval.stop <= center:
+            if interval.stop < center:
                 lefts.append(interval)
-            elif interval.start >= center:
+            elif interval.start > center:
                 rights.append(interval)
             else: # overlapping.
                 self.intervals.append(interval)
