@@ -1,7 +1,9 @@
+import operator
+
 class IntervalTree(object):
     __slots__ = ('intervals', 'left', 'right', 'center')
 
-    def __init__(self, intervals, depth=16, minbucket=96, _extent=None, maxbucket=4096):
+    def __init__(self, intervals, depth=16, minbucket=64, _extent=None, maxbucket=512):
         """\
         `intervals` a list of intervals *with start and stop* attributes.
         `depth`     the depth of the tree
@@ -43,8 +45,14 @@ class IntervalTree(object):
             self.left = self.right = None
             return 
 
+        if _extent is None:
+            # sorting the first time through allows it to get
+            # better performance in searching later.
+            intervals.sort(key=operator.attrgetter('start'))
+
         left, right = _extent or \
-               (min(i.start for i in intervals), max(i.stop for i in intervals))
+               (intervals[0].start, max(i.stop for i in intervals))
+        #center = intervals[len(intervals)/ 2].stop
         center = (left + right) / 2.0
 
         
@@ -60,15 +68,18 @@ class IntervalTree(object):
             else: # overlapping.
                 self.intervals.append(interval)
                 
-        self.left   = lefts  and IntervalTree(lefts,  depth, minbucket, (left,  center)) or None
-        self.right  = rights and IntervalTree(rights, depth, minbucket, (center, right)) or None
+        self.left   = lefts  and IntervalTree(lefts,  depth, minbucket, (intervals[0].start,  center)) or None
+        self.right  = rights and IntervalTree(rights, depth, minbucket, (center,               right)) or None
         self.center = center
  
  
     def find(self, start, stop):
         """find all elements between (or overlapping) start and stop"""
-        overlapping = [i for i in self.intervals if i.stop >= start 
-                                              and i.start <= stop]
+        if self.intervals and not stop < self.intervals[0].start:
+            overlapping = [i for i in self.intervals if i.stop >= start 
+                                                    and i.start <= stop]
+        else:
+            overlapping = []
 
         if self.left and start <= self.center:
             overlapping += self.left.find(start, stop)
@@ -89,6 +100,7 @@ class IntervalTree(object):
 
 
 class Interval(object):
+    __slots__ = ('start', 'stop')
     def __init__(self, start, stop):
         self.start = start
         self.stop  = stop
@@ -105,7 +117,7 @@ if __name__ == '__main__':
     import random, time
     def rand():
         s = random.randint(1, 4000000)
-        return Interval(s, s + random.randint(2000, 6000))
+        return Interval(s, s + random.randint(200, 6000))
     intervals = [rand() for i in xrange(30000)]
     START, STOP = 300000, 400000
     intervals.append(Interval(0, 500000))
@@ -117,9 +129,11 @@ if __name__ == '__main__':
     t = time.time()
     bf = [i for i in intervals if i.stop >= START and i.start <= STOP]
     btime = time.time() - t
-    assert len(bf) == len(res) , (len(bf), len(res), set(bf).difference(res), START, STOP)
+    assert not set(bf).symmetric_difference(res) , (len(bf), len(res), set(bf).difference(res), START, STOP)
     print treetime, btime, btime/treetime
 
+    
+    assert sum(1 for x in tree) == len(intervals), "iterator not working?"
 
     import doctest
     doctest.testmod()
