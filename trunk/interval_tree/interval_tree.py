@@ -85,8 +85,8 @@ if __name__ == '__main__':
     import random, time
     def rand():
         s = random.randint(1, 4000000)
-        return Interval(s, s + random.randint(2000, 60000))
-    intervals = [rand() for i in xrange(12000)]
+        return Interval(s, s + random.randint(2000, 6000))
+    intervals = [rand() for i in xrange(30000)]
     START, STOP = 300000, 400000
     intervals.append(Interval(0, 500000))
 
