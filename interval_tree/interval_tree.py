@@ -25,6 +25,14 @@ class IntervalTree(object):
         over searching manually over all 3 elements in the list (like
         a sucker). 
 
+        the IntervalTree class now also supports the iterator protocol
+        so it's easy to loop over all elements in the tree:
+
+         >>> import operator
+         >>> sorted([iv for iv in tree], key=operator.attrgetter('start'))
+         [Interval(1, 8), Interval(2, 3), Interval(3, 6)]
+
+
         NOTE: any object with start and stop attributes can be used
         in the incoming intervals list.
         """ 
@@ -70,6 +78,16 @@ class IntervalTree(object):
 
         return overlapping
 
+    def __iter__(self):
+        if self.left:
+            for l in self.left: yield l
+
+        for i in self.intervals: yield i
+
+        if self.right:
+            for r in self.right: yield r
+
+
 class Interval(object):
     def __init__(self, start, stop):
         self.start = start
@@ -101,6 +119,7 @@ if __name__ == '__main__':
     btime = time.time() - t
     assert len(bf) == len(res) , (len(bf), len(res), set(bf).difference(res), START, STOP)
     print treetime, btime, btime/treetime
+
 
     import doctest
     doctest.testmod()
