@@ -1,6 +1,6 @@
-
 import numpy as np
 import os
+
 
 
 def loadtxt(fname, **kwargs):
@@ -12,6 +12,13 @@ def loadtxt(fname, **kwargs):
     A = np.genfromtxt(fname, **kwargs)
     A.dump(pklfile)
     return A
+
+loadtxt.__doc__ = """\
+    a modified version of numpy.loadtxt which will also save a
+    pickled version of the file which will be used for faster
+    loading after the first time.
+    """ + np.loadtxt.__doc__
+
 
 def savetxt(A, fname, delimiter="\t", names=None):
     pklfile = fname + ".nkl"
@@ -44,4 +51,13 @@ def savetxt(A, fname, delimiter="\t", names=None):
     A.dtype.names = names
     A.dump(pklfile)
     A.dtype.names = old_names
+
+savetxt.__doc__ = """\
+    an extension to numpy.savetxt which will attempt to write a header row
+    based on the dtype of the array if a list of names is not given.
+    It will save a pickled file which (in combination with loadtxt in 
+    this module, will speed loading
+    """ + np.savetxt.__doc__
+
+
 
