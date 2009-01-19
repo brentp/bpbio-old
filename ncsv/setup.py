@@ -11,7 +11,7 @@ setup(name          = 'ncsv',
       url   = '',
       packages      = [''],
       requires = ['numpy'],
-      test_suite = 'tests.main',
+      test_suite = 'tests',
       classifiers   = [
         'Development Status :: 4 - Beta'
         'Intended Audience :: Developers',
