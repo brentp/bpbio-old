@@ -25,6 +25,9 @@ class NCSVTester(unittest.TestCase):
         self.assertEqual(self.a.dtype, b.dtype)
         self.assertEqual(self.a[1], b[1])
 
+        # can extract by column
+        self.assertEqual(b[b['gender'] == 'M'].shape[0], 1)
+
 
     def test_names(self):
         # set the names manually, and it will figure out the format string. 
@@ -35,6 +38,7 @@ class NCSVTester(unittest.TestCase):
 
         self.assertEqual(self.a[1]['age'], c[1]['b'])
         self.assertEqual(c[0]['c'], 72.1, c[0])
+
 
     def tearDown(self):
         os.unlink("g.txt")
