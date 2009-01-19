@@ -1,7 +1,7 @@
 from setuptools import setup
 
 
-setup(name          = 'ncsv',
+setup(name          = 'npytxt',
       version       = '0.1.0',
       description   = 'easier csv reading/writing from numpy',
       license       = 'MIT',
