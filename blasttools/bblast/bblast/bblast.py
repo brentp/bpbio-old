@@ -1,5 +1,6 @@
 import os
 from subprocess import Popen
+import sys
 
 def get_blast_file(qfasta, sfasta, out_dir=None):
     q = os.path.basename(qfasta)
@@ -48,7 +49,8 @@ def is_protein_db(blast_cfg):
     return blast_cfg["p"] in ("blastx", "blastp")
    
 
-def blast(blast_cfg, out_dir=None, blastall="/usr/bin/blastall", full_name=False):
+def blast(_blast_cfg, out_dir=None, blastall="/usr/bin/blastall", full_name=False):
+    blast_cfg = _blast_cfg.copy()
     check_args(blast_cfg)
     q_fasta = blast_cfg["i"]
     s_fasta = blast_cfg["d"]
@@ -62,8 +64,8 @@ def blast(blast_cfg, out_dir=None, blastall="/usr/bin/blastall", full_name=False
         sh(cmd)
     else:
         print "NOT running cmd:\n%s\n because %s.nin is up to date" % (cmd, s_fasta)
-
-    if not "o" in args:
+    blast_file = ""
+    if not "o" in blast_cfg:
         blast_file = get_blast_file(q_fasta, s_fasta, out_dir)
 
         if full_name:
@@ -73,6 +75,9 @@ def blast(blast_cfg, out_dir=None, blastall="/usr/bin/blastall", full_name=False
                                if not p[0] in ("i", "d")]) \
                   + ".blast"
         blast_cfg.update({"o": blast_file})
+    else:
+        print blast_cfg["o"]
+        raise
 
     params = add_dash(blast_cfg)
 
