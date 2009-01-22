@@ -1,16 +1,20 @@
 import numpy as np
-import os
+import os, sys
 
 
 
-def loadtxt(fname, **kwargs):
-    pklfile = fname + ".nkl"
-    if os.path.exists(pklfile) and \
-           os.stat(pklfile).st_mtime >= os.stat(fname).st_mtime:
-         return np.load(pklfile)
-   
+def loadtxt(fname, npy=True, **kwargs):
+    assert os.path.exists(fname)
+
+    npyfile = fname + ".npy"
+    if npy and os.path.exists(npyfile) and \
+             os.stat(npyfile).st_mtime >= os.stat(fname).st_mtime:
+        return np.load(npyfile)
+
+    if not "dtype" in kwargs:  kwargs['dtype'] = None
+    if not "names" in kwargs:  kwargs['names'] = True
     A = np.genfromtxt(fname, **kwargs)
-    A.dump(pklfile)
+    np.save(npyfile, A)
     return A
 
 loadtxt.__doc__ = """\
@@ -20,8 +24,8 @@ loadtxt.__doc__ = """\
     """ + np.loadtxt.__doc__
 
 
-def savetxt(A, fname, delimiter="\t", names=None):
-    pklfile = fname + ".nkl"
+def savetxt(fname, A, delimiter="\t", names=None):
+    npyfile = fname + ".npy"
     names = names or A.dtype.names
 
     if hasattr(fname, 'seek'):
@@ -38,18 +42,17 @@ def savetxt(A, fname, delimiter="\t", names=None):
         fmt = ['%' + dt[1].lower() for dt in types]
     else:
         fmt = A.dtype.str[1].lower()
-    # it has a dictionary interface, but seems to preserve order
-
 
     np.savetxt(fh, A, fmt, delimiter)
+
     old_names = None
     if names == A.dtype.names:
-        A.dump(pklfile)
+        np.save(npyfile, A)
         return
 
     old_names = A.dtype.names
     A.dtype.names = names
-    A.dump(pklfile)
+    np.save(npyfile, A)
     A.dtype.names = old_names
 
 savetxt.__doc__ = """\
@@ -58,6 +61,4 @@ savetxt.__doc__ = """\
     It will save a pickled file which (in combination with loadtxt in 
     this module, will speed loading
     """ + np.savetxt.__doc__
-
-
 
