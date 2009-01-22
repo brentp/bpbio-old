@@ -1,6 +1,7 @@
 from setuptools import setup, find_packages
 import sys, os
 
+
 version = '0.1'
 
 setup(name='bblast',
@@ -15,13 +16,14 @@ setup(name='bblast',
       author_email='bpederse@gmail.com',
       url='',
       license='MIT',
-      packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
+      packages=find_packages(exclude=['ez_setup', 'examples', 'tests'] +
+                             ["."]),
       include_package_data=True,
-      zip_safe=True,
+      zip_safe=False,
       install_requires=[
           # -*- Extra requirements: -*-
       ],
-      scripts=["bblast.py"],
+      scripts=["bblast/bblast.py"],
       entry_points="""
       # -*- Entry points: -*-
       """,
