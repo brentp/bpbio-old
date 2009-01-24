@@ -1,5 +1,6 @@
 import os
 from subprocess import Popen
+import sys
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -111,7 +112,6 @@ def check_args(args):
 
 
 if __name__ == "__main__":
-    import sys
     if len(sys.argv) == 1 or sys.argv[1] in ("-h", "--help"):
         sh("/usr/bin/blastall")
         print """\
