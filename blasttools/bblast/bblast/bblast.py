@@ -1,6 +1,9 @@
 import os
 from subprocess import Popen
-import sys
+
+import logging
+logging.basicConfig(level=logging.DEBUG)
+log = logging.getLogger(__file__)
 
 def get_blast_file(qfasta, sfasta, out_dir=None):
     q = os.path.basename(qfasta)
@@ -29,7 +32,7 @@ def is_same_blast_params(blast_file, cmd):
 
 def sh(cmd):
     """ run a commmand in the shell"""
-    print cmd
+    log.debug(cmd)
     proc = Popen(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True)
     r = proc.communicate()
 
@@ -63,7 +66,7 @@ def blast(_blast_cfg, out_dir=None, blastall="/usr/bin/blastall", full_name=Fals
     if not is_current_file(s_fasta + ".nin", s_fasta):
         sh(cmd)
     else:
-        print "NOT running cmd:\n%s\n because %s.nin is up to date" % (cmd, s_fasta)
+        log.warn("NOT running cmd:\n%s\n because %s.nin is up to date" % (cmd, s_fasta))
     blast_file = ""
     if not "o" in blast_cfg:
         blast_file = get_blast_file(q_fasta, s_fasta, out_dir)
@@ -76,7 +79,7 @@ def blast(_blast_cfg, out_dir=None, blastall="/usr/bin/blastall", full_name=Fals
                   + ".blast"
         blast_cfg.update({"o": blast_file})
     else:
-        print blast_cfg["o"]
+        log.error(blast_cfg["o"])
         raise
 
     params = add_dash(blast_cfg)
@@ -94,11 +97,11 @@ def blast(_blast_cfg, out_dir=None, blastall="/usr/bin/blastall", full_name=Fals
         sh(cmd)
         if os.path.exists(blast_file):
             lines = sum(1 for line in open(blast_file))
-            print "\n\n%s lines of blast output sent to %s" % (lines, blast_file)
+            log.debug("\n\n%s lines of blast output sent to %s" % (lines, blast_file))
         else:
-            print "\n\nERROR: blast not run"
+            log.errorr("\n\nERROR: blast not run")
     else:
-        print "NOT running cmd:\n%s\n because %s is up to date" % (cmd, blast_file)
+        log.error("NOT running cmd:\n%s\n because %s is up to date" % (cmd, blast_file))
 
 def check_args(args):
     if not "p" in args: args["p"] = "blastn"
