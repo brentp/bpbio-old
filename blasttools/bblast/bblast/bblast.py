@@ -4,7 +4,7 @@ import sys
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
-log = logging.getLogger(__file__)
+log = logging.getLogger(os.path.basename(__file__))
 
 def get_blast_file(qfasta, sfasta, out_dir=None):
     q = os.path.basename(qfasta)
