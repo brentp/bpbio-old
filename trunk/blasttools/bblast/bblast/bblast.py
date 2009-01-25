@@ -70,7 +70,7 @@ def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False):
         log.warn("NOT running cmd:\n%s\n because %s.nin is up to date" % (cmd, s_fasta))
     blast_file = ""
     to_query_dir = blast_cfg.get("o", "F").upper() != "F"
-    if blast_cfg.get("o", "F").upper() not in ("T", "F")
+    if blast_cfg.get("o", "F").upper() not in ("T", "F"):
         to_query_dir = blast_cfg["o"]
     blast_file = get_blast_file(q_fasta, s_fasta, to_query_dir)
 
