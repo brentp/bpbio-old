@@ -53,7 +53,7 @@ def is_protein_db(blast_cfg):
     return blast_cfg["p"] in ("blastx", "blastp")
    
 
-def blast(_blast_cfg, out_dir=None, blastall="/usr/bin/blastall", full_name=False):
+def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False):
     blast_cfg = _blast_cfg.copy()
     check_args(blast_cfg)
     q_fasta = blast_cfg["i"]
@@ -69,19 +69,16 @@ def blast(_blast_cfg, out_dir=None, blastall="/usr/bin/blastall", full_name=Fals
     else:
         log.warn("NOT running cmd:\n%s\n because %s.nin is up to date" % (cmd, s_fasta))
     blast_file = ""
-    if not "o" in blast_cfg:
-        blast_file = get_blast_file(q_fasta, s_fasta, out_dir)
+    to_query_dir = blast_cfg.get("o", "F") in ("F", "f")
+    blast_file = get_blast_file(q_fasta, s_fasta, to_query_dir)
 
-        if full_name:
-            blast_file = blast_file.rstrip(".blast") \
-                  + "_params__" \
-                  + "__".join(["%s_%s" % p for p in sorted(blast_cfg.items())
-                               if not p[0] in ("i", "d")]) \
-                  + ".blast"
-        blast_cfg.update({"o": blast_file})
-    else:
-        log.error(blast_cfg["o"])
-        raise
+    if full_name:
+        blast_file = blast_file.rstrip(".blast") \
+              + "_params__" \
+              + "__".join(["%s_%s" % p for p in sorted(blast_cfg.items())
+                           if not p[0] in ("i", "d")]) \
+              + ".blast"
+    blast_cfg.update({"o": blast_file})
 
     params = add_dash(blast_cfg)
 
@@ -127,14 +124,15 @@ if __name__ == "__main__":
    the current blast file is up to date.
 
    additional args provided by this script are:
-            --out_dir /path/to/blast/output/dir
-         or
-            --out_dir t
-         in the former case, the blast output file will be created
-         from the names of the input fasta files and place in the
-         that dir. in the latter case, the blast file will go to
-         the same directory as the query fasta file.
-         this is not used of -o is specified.
+            -o T
+         or 
+            -o F
+
+         in which case the blast output file will be created
+         from the names of the input fasta files and placed in the
+         directory of the query fasta
+         in the latter case, the blast file will go to the current
+         direcotry
 
             --full_name T
 
@@ -151,14 +149,6 @@ if __name__ == "__main__":
         full_name = not f.lower() in ("f", "0")
     except:
         full_name = False
-    try:
-        od = args.pop("out_dir")
-        print od
-        out_dir = od if os.path.exists(od) else True
-        if od.startswith("/") and od != out_dir:
-            raise Exception("directory %s does not exist" % od)
-    except KeyError:
-        out_dir = False
 
     if not "i" in args:
         print "need to specify a query fasta (-i)"
@@ -167,4 +157,4 @@ if __name__ == "__main__":
         print "need to specify a subject fasta (-d)"
         sys.exit()
     
-    blast(args, out_dir=out_dir, full_name=full_name)
+    blast(args, full_name=full_name)
