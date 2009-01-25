@@ -64,24 +64,27 @@ def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False):
     protein = "T" if is_protein_db(blast_cfg) else "F"
     cmd = "%(format_db)s -i %(s_fasta)s -p %(protein)s" % locals()
 
-    if not is_current_file(s_fasta + ".nin", s_fasta):
+    ext = ".pin" if protein == "T" else ".nin"
+    if not is_current_file(s_fasta + ext, s_fasta):
         sh(cmd)
     else:
         log.warn("NOT running cmd:\n%s\n because %s.nin is up to date" % (cmd, s_fasta))
     blast_file = ""
     to_query_dir = blast_cfg.get("o", "F").upper() != "F"
     if blast_cfg.get("o", "F").upper() not in ("T", "F"):
-        to_query_dir = blast_cfg["o"]
-    blast_file = get_blast_file(q_fasta, s_fasta, to_query_dir)
+        log.error("using file past in on -o: %s" % blast_cfg["o"])
+        blast_file = blast_cfg["o"]
 
-    if full_name:
-        blast_file = blast_file.rstrip(".blast") \
-              + "_params__" \
-              + "__".join(["%s_%s" % p for p in sorted(blast_cfg.items())
-                           if not p[0] in ("i", "d")]) \
-              + ".blast"
+        if full_name:
+            blast_file = blast_file.rstrip(".blast") \
+                  + "_params__" \
+                  + "__".join(["%s_%s" % p for p in sorted(blast_cfg.items())
+                               if not p[0] in ("i", "d")]) \
+                  + ".blast"
+    else:
+        blast_file = get_blast_file(q_fasta, s_fasta, to_query_dir)
+
     blast_cfg.update({"o": blast_file})
-
     params = add_dash(blast_cfg)
 
     params = ["%s %s" % (p, v) for p, v in sorted(params.items())]
