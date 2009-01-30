@@ -1,7 +1,16 @@
 import numpy as np
 import os, sys
 
+def loadgff(fname, npy=True, **kwargs):
+    kwargs['dtype'] = {
+      'names' :
+           ('seqid', 'source', 'type', 'start', 'end', 'score',
+            'strand', 'phase', 'attrs') ,
+       'formats':
+            ('S24', 'S16', 'S16', 'i4', 'i4', 'f8', 'S1', 'i4', 'S128')}
+    #kwargs['converters'] = {8: _attr }
 
+    return loadtxt(fname, npy=npy, **kwargs)
 
 def loadtxt(fname, npy=True, **kwargs):
     assert os.path.exists(fname)
@@ -12,7 +21,7 @@ def loadtxt(fname, npy=True, **kwargs):
         return np.load(npyfile)
 
     if not "dtype" in kwargs:  kwargs['dtype'] = None
-    if not "names" in kwargs:  kwargs['names'] = True
+    if not ("names" in kwargs or kwargs['dtype']):  kwargs['names'] = True
     A = np.genfromtxt(fname, **kwargs)
     np.save(npyfile, A)
     return A
@@ -50,6 +59,7 @@ def savetxt(fname, A, delimiter="\t", names=None):
         np.save(npyfile, A)
         return
 
+    # save the file with differnt names than the array dtype...
     old_names = A.dtype.names
     A.dtype.names = names
     np.save(npyfile, A)
