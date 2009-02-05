@@ -4,6 +4,7 @@ version that genometools will accept.
 my need to add more top-level features to sortable_type()
 """
 import sys
+import re
 
 files = sys.argv[1:]
 
@@ -15,6 +16,17 @@ def sortable_type(ft):
     if ft == 'CDS':  return 2
     return 3
 
+id_re = re.compile("ID=([^;]+)")
+def to_id(l):
+    try:
+        return re.search(id_re, l).groups(0)[0]
+    except:
+        #for lines that dont have ID
+        # return a unique thing.
+        return to_id.counter
+    finally:
+        to_id.counter += 1
+to_id.counter = 0
 
 for fi in files:
     for line in open(fi):
@@ -24,13 +36,22 @@ for fi in files:
 
 lines.sort()
 print '##gff-version 3'
-last = None
+last = lines[-1]
 for line in lines:
-    # since their sorted, can remove dups without an extra 
-    # dict
-    if line[-1] == last: continue
+    # since theyre sorted, can remove dups without an extra 
+    # dict.
+    sline = line[-1].split()
+    if sline == last: continue
+
+    # repeated start, stop, type, ID with something
+    # else different.
+    if sline[2:5] == last[2:5]:
+        if to_id(sline[-1]) == to_id(last[-1]):
+            # could also just give it a different id.
+            continue
+
     print line[-1],
-    last = line[-1]
+    last = sline
 
 """
 from __future__ import with_statement
