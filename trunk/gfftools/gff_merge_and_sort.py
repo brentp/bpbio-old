@@ -23,7 +23,7 @@ for fi in files:
         lines.append((sline[0], sortable_type(sline[2]), int(sline[3]), line))
 
 lines.sort()
-print '##gff-version 3\n'
+print '##gff-version 3'
 for line in lines:
     print line[-1],
 
