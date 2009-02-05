@@ -2,20 +2,27 @@ import numpy as np
 import os, sys
 
 def loadgff(fname, npy=True, **kwargs):
+    def _attr(kvstr):
+        pairs = [kv.split("=") for kv in kvstr.split(";")]
+        return dict(pairs)
     kwargs['dtype'] = {
       'names' :
            ('seqid', 'source', 'type', 'start', 'end', 'score',
             'strand', 'phase', 'attrs') ,
        'formats':
-            ('S24', 'S16', 'S16', 'i4', 'i4', 'f8', 'S1', 'i4', 'S128')}
-    #kwargs['converters'] = {8: _attr }
+            ('S24', 'S16', 'S16', 'i4', 'i4', 'f8', 'S1', 'i4', 'O4')}
+    kwargs['converters'] = {8: _attr }
 
     return loadtxt(fname, npy=npy, **kwargs)
 
 def loadtxt(fname, npy=True, **kwargs):
-    assert os.path.exists(fname)
+    npyfile = None
+    if isinstance(fname, basestring):
+        assert os.path.exists(fname)
+        npyfile = fname + ".npy"
+    else:
+        npy = False # it's a StringIO
 
-    npyfile = fname + ".npy"
     if npy and os.path.exists(npyfile) and \
              os.stat(npyfile).st_mtime >= os.stat(fname).st_mtime:
         return np.load(npyfile)
@@ -23,7 +30,8 @@ def loadtxt(fname, npy=True, **kwargs):
     if not "dtype" in kwargs:  kwargs['dtype'] = None
     if not ("names" in kwargs or kwargs['dtype']):  kwargs['names'] = True
     A = np.genfromtxt(fname, **kwargs)
-    np.save(npyfile, A)
+    if npy:
+        np.save(npyfile, A)
     return A
 
 loadtxt.__doc__ = """\

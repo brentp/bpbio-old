@@ -171,9 +171,9 @@ cdef class Intersecter:
     """
 
     # since intervals are sorted by start, also have to know the max_len (see find)
-    cdef int max_len 
+    cdef int max_len
     # if an item is added, the list must be resorted. (see # add_interval)
-    cdef int dirty 
+    cdef int dirty
     # a list storing the intervals/Feature's.
     cdef object intervals
 
