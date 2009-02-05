@@ -114,18 +114,22 @@ if __name__ == '__main__':
 
     import random, time
     def rand():
-        s = random.randint(1, 4000000)
+        s = random.randint(1, 2000000)
         return Interval(s, s + random.randint(200, 6000))
     intervals = [rand() for i in xrange(30000)]
-    START, STOP = 300000, 400000
+    START, STOP = 390000, 400000
     intervals.append(Interval(0, 500000))
+    tries = 100
 
     tree = IntervalTree(intervals)
     t = time.time()
-    res = tree.find(START, STOP)
+    for i in range(tries):
+        res = tree.find(START, STOP)
     treetime = time.time() - t
     t = time.time()
-    bf = [i for i in intervals if i.stop >= START and i.start <= STOP]
+
+    for i in range(tries):
+        bf = [i for i in intervals if i.stop >= START and i.start <= STOP]
     btime = time.time() - t
     assert not set(bf).symmetric_difference(res) , (len(bf), len(res), set(bf).difference(res), START, STOP)
     print treetime, btime, btime/treetime

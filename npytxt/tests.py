@@ -1,5 +1,5 @@
 import numpy as np
-from npytxt import savetxt, loadtxt
+from npytxt import savetxt, loadtxt, loadgff
 from cStringIO import StringIO
 
 import unittest
@@ -72,6 +72,30 @@ class NpyTxtTester(unittest.TestCase):
     def tearDown(self):
         os.unlink("g.txt")
 
+
+class NpyGFFTester(unittest.TestCase):
+    def setUp(self):
+        gffstr = """\
+##gff-version 3
+1\tucb\tgene\t2234602\t2234702\t.\t-\t.\tID=grape_1_2234602_2234702;match=EVM_prediction_supercontig_1.248,EVM_prediction_supercontig_1.248.mRNA
+1\tucb\tgene\t2300292\t2302123\t.\t+\t.\tID=grape_1_2300292_2302123;match=EVM_prediction_supercontig_244.8
+1\tucb\tgene\t2303615\t2303967\t.\t+\t.\tID=grape_1_2303615_2303967;match=EVM_prediction_supercontig_244.8
+1\tucb\tgene\t2303616\t2303966\t.\t+\t.\tParent=grape_1_2303615_2303967
+1\tucb\tgene\t3596400\t3596503\t.\t-\t.\tID=grape_1_3596400_3596503;match=evm.TU.supercontig_167.27
+1\tucb\tgene\t3600651\t3600977\t.\t-\t.\tmatch=evm.model.supercontig_1217.1,evm.model.supercontig_1217.1.mRNA
+"""
+        d = StringIO(gffstr)
+        self.a = loadgff(d)
+        #print >>sys.stderr, self.a.dtype
+
+    def test_cols(self):
+        self.assertEqual(self.a[0]['seqid'], '1')
+        self.assert_(np.all(self.a['end'] == np.array([2234702, 2302123, 2303967,
+                                                2303966, 3596503, 3600977])))
+
+    def test_attrs(self):
+        self.assertEqual(self.a[1]['attrs']['ID'], 'grape_1_2300292_2302123')
+        #self.assertEqual(self.a[1]['attrs']['match'], 'EVM_prediction_supercontig_244.8')
 
 def main():
     unittest.main()
