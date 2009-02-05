@@ -24,8 +24,13 @@ for fi in files:
 
 lines.sort()
 print '##gff-version 3'
+last = None
 for line in lines:
+    # since their sorted, can remove dups without an extra 
+    # dict
+    if line[-1] == last: continue
     print line[-1],
+    last = line[-1]
 
 """
 from __future__ import with_statement
