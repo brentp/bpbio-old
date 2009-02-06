@@ -17,8 +17,10 @@
 >>> arr = data.split("\\n")
 >>> header_line = arr[0]
 >>> sep = get_sep(header_line)
->>> sep
-'\\t'
+
+# it figures out you used tabs (also handles spaces \s+ or commas).
+>>> bool(sep.match("\\t"))
+True
 
 >>> h = get_header_map(header_line, sep)
 >>> h
@@ -35,17 +37,19 @@
 
 
 import sys
+import re
+
 def get_sep(line):
     c = line.count(",")
     t = line.count("\t")
     s = line.count(" ")
     m = max(c, t, s)
-    for char, sep in zip((",", "\t", " ") ,(c, t, s)):
-        if m == sep: return char
+    for char, sep in zip((",", "\t", "\s+") ,(c, t, s)):
+        if m == sep: return re.compile(char)
     raise Exception("cant determine separator")
 
 def get_header_map(line, sep):
-    line = line.rstrip().lower().split(sep)
+    line = sep.split(line.rstrip().lower())
     assert 'start' in line
     assert 'stop' in line or 'end' in line
     assert 'seqid' in line or 'chr' in line or 'chromosome' in line
@@ -61,7 +65,7 @@ GFF_ATTRS = ('ID', 'Name', 'Alias', 'Parent', 'Target', 'Gap', 'Note')
 GFF_ATTRS = dict((a.lower(), a) for a in GFF_ATTRS)
 
 def line_to_dict(line, sep, header_map):
-    line = line.rstrip().split(sep)
+    line = sep.split(line.rstrip())
     assert len(line) == len(header_map), (sep == "\t", line, header_map)
     d = {'attrs':{}}
     for i, value in enumerate(line):
