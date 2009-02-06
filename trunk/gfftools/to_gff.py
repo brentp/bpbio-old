@@ -11,8 +11,12 @@
 >>> txt_data = StringIO(data)
 
 >>> gffiter = to_gff_lines(txt_data, as_dict=True)
->>> gffiter.next()
+>>> d = gffiter.next()
+>>> d
 {'start': 10683551, 'seqid': '2', 'end': 10683632, 'attrs': {'tair': 'AT2G25095', 'ID': 'miR156a'}, 'strand': '-'}
+
+>>> Feature.from_dict(d)
+Feature('miR156a', start=10683551, end=10683632, strand='-')
 
 >>> arr = data.split("\\n")
 >>> header_line = arr[0]
@@ -81,7 +85,8 @@ def line_to_dict(line, sep, header_map):
     return d
 
 
-def to_gff_lines(txtpath, as_dict=False):
+
+def to_gff_lines(txtpath, as_dict=False, as_obj=False):
 
     txt = hasattr(txtpath, 'read') and txtpath or open(txtpath)
     header = txt.readline()
@@ -107,6 +112,31 @@ def feature_dict_to_gff(fdict):
     d['attrs'] = attrs
     s = fmt % d
     return s
+
+
+class Feature(object):
+    def __init__(self, start, end, strand, **kwargs):
+        self.start  = start
+        self.end    = end
+        self.strand = strand
+            
+        for k, v in kwargs.iteritems():
+            setattr(self, k, v)
+
+    @classmethod
+    def from_dict(self, d):
+        start = d.pop('start')
+        end = d.pop('end')
+        strand = d.pop('strand')
+        return Feature(start, end, strand, **d)
+
+    def __repr__(self):
+        s = ''
+        if 'ID' in self.attrs:
+            s = "'" + self.attrs['ID'] + "', " 
+        s = 'Feature(' + s
+        return s + "start=%i, end=%i, strand='%s')" % \
+                    (self.start, self.end, self.strand)
 
 if __name__ == "__main__":
     import optparse
