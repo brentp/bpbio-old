@@ -10,7 +10,9 @@
 >>> from cStringIO import StringIO
 >>> txt_data = StringIO(data)
 
-#>>> gffstr = to_gff(txt_data)
+>>> gffiter = to_gff_lines(txt_data, as_dict=True)
+>>> gffiter.next()
+{'start': 10683551, 'seqid': '2', 'end': 10683632, 'attrs': {'tair': 'AT2G25095', 'ID': 'miR156a'}, 'strand': '-'}
 
 >>> arr = data.split("\\n")
 >>> header_line = arr[0]
@@ -30,6 +32,7 @@
 ['2', '.', '.', '10683551', '10683632', '.', '-', '.', 'ID=miR156a;tair=AT2G25095']
 
 """
+
 
 import sys
 def get_sep(line):
@@ -51,6 +54,7 @@ def get_header_map(line, sep):
     line = (l if l != 'name' else 'id' for l in line)
     return dict(enumerate(line))
 
+GFF_VERSION_HEADER = '##gff-version 3'
 GFF_HEADERS = {'seqid': str, 'source': str, 'type': str, 'start': int, 'end':
                int, 'score':float, 'strand': str, 'phase': str}
 GFF_ATTRS = ('ID', 'Name', 'Alias', 'Parent', 'Target', 'Gap', 'Note')
@@ -73,21 +77,19 @@ def line_to_dict(line, sep, header_map):
     return d
 
 
-def to_gff(txtpath, outgff=None):
-    if outgff:
-        outgff = open(outgff, 'wb')
-    else:
-        outgff = sys.stdout
+def to_gff_lines(txtpath, as_dict=False):
 
     txt = hasattr(txtpath, 'read') and txtpath or open(txtpath)
     header = txt.readline()
     sep = get_sep(header)
     hmap = get_header_map(header, sep)
-    print >>outgff, "##gff-version 3"
     for line in txt:
         if line[0] == '#': continue
         fdict = line_to_dict(line, sep, hmap)
-        print >>outgff, feature_dict_to_gff(fdict)
+        if as_dict:
+            yield fdict
+        else:
+            yield feature_dict_to_gff(fdict)
 
 def feature_dict_to_gff(fdict):
     d = fdict.copy()
@@ -124,4 +126,10 @@ if __name__ == "__main__":
         print "\n\n"
         sys.exit(parser.print_help())
 
-    to_gff(args[0], options.out_file)
+    o = options.out_file
+    if o:
+        o = open(o, 'wb')
+    else: o = sys.stdout
+    print >>o, GFF_VERSION_HEADER
+    for gff_line in to_gff_lines(args[0]):
+        print >>o, gff_line
