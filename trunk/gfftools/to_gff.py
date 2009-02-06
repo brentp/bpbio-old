@@ -95,7 +95,9 @@ def to_gff_lines(txtpath, as_dict=False, as_obj=False):
     for line in txt:
         if line[0] == '#': continue
         fdict = line_to_dict(line, sep, hmap)
-        if as_dict:
+        if as_obj:
+            yield Feature.from_dict(fdict)
+        elif as_dict:
             yield fdict
         else:
             yield feature_dict_to_gff(fdict)
@@ -122,6 +124,10 @@ class Feature(object):
             
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
+        if hasattr(self, 'attrs'):
+            self.attribs = self.attrs
+        if hasattr(self, 'attribs'):
+            self.attrs = self.attribs
 
     @classmethod
     def from_dict(self, d):
