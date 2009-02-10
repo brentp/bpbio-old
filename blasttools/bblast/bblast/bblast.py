@@ -33,8 +33,8 @@ def is_same_blast_params(blast_file, cmd):
 
 def sh(cmd, blog=None):
     """ run a commmand in the shell"""
-    if not log is None:
-        cmd += " 2>&1%s" % blog
+    if not blog is None:
+        cmd += " 2>%s" % blog
     log.debug(cmd)
     proc = Popen(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True)
     r = proc.communicate()
@@ -110,7 +110,7 @@ def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False, blast_log='
             lines = sum(1 for line in open(blast_file))
             log.debug("\n\n%s lines of blast output sent to %s" % (lines, blast_file))
         else:
-            log.errorr("\n\nERROR: blast not run")
+            log.error("\n\nERROR: blast not run")
     else:
         log.error("NOT running cmd:\n%s\n because %s is up to date" % (cmd, blast_file))
 
