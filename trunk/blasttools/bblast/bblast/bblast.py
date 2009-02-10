@@ -31,8 +31,10 @@ def is_same_blast_params(blast_file, cmd):
     if not os.path.exists(params_file): return False
     return cmd.strip() == open(params_file).read().strip()
 
-def sh(cmd):
+def sh(cmd, blog=None):
     """ run a commmand in the shell"""
+    if not log is None:
+        cmd += " 2>&1%s" % blog
     log.debug(cmd)
     proc = Popen(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True)
     r = proc.communicate()
@@ -53,7 +55,7 @@ def is_protein_db(blast_cfg):
     return blast_cfg["p"] in ("blastx", "blastp")
    
 
-def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False):
+def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False, blast_log='blast.log'):
     blast_cfg = _blast_cfg.copy()
     check_args(blast_cfg)
     q_fasta = blast_cfg["i"]
@@ -103,7 +105,7 @@ def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False):
         fh = open(blast_file + ".cmd", "w")
         fh.write(cmd)
         fh.close()
-        sh(cmd)
+        sh(cmd, blog=blast_log)
         if os.path.exists(blast_file):
             lines = sum(1 for line in open(blast_file))
             log.debug("\n\n%s lines of blast output sent to %s" % (lines, blast_file))
