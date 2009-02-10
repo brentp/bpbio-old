@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.lines as lines
 from matplotlib.patches import Rectangle
+from matplotlib.colors import hex2color
 import numpy as np
 
 def make_xaxis(ax, yloc, offset=0.05, **props):
@@ -45,6 +46,20 @@ def genomic_axes(fig, bpmin, bpmax, props=props):
     ax.add_artist(r)
     return ax
 
+def get_colors(f):
+    # let the color be set per feature
+    color = f.attribs.get('color', f.attribs.get('fc')) #, 'gray'))
+    ec = f.attribs.get('ec', f.attribs.get('edgecolor', f.attribs.get('edge_color')))
+    if color:
+        if color[0] != '#': color = '#' + color
+        color = hex2color(color)
+    else: color = 'gray'
+
+    if ec:
+        if ec[0] != '#': ec = '#' + ec
+        ec = hex2color(ec)
+    return color, ec
+
 def paint(ax, f, txt):
     if txt is True: txt = f.attribs['ID']
     if txt is False: txt = ''
@@ -54,9 +69,11 @@ def paint(ax, f, txt):
     x = (f.start + f.end) / 2
     y = strand * (0.03 if txt else 0.3)
 
-    ax.annotate(txt, xy=(x, y), xycoords='data',
+    color, ec = get_colors(f)
+
+    ax.annotate(txt, xy=(x, y), xycoords='data', 
             xytext=(x, strand * 0.94),
-                arrowprops=dict(fc='gray', ec=None, width=0.2, headwidth=5),
+                arrowprops=dict(fc=color, ec=ec, width=1.5, headwidth=5),
                 #arrowprops=dict(arrowstyle="wedge,tail_width=0.7",
                 #                fc="0.6", ec="none"),
                 horizontalalignment='right' if f.strand == '-' else 'left',
@@ -81,13 +98,14 @@ def paint_features(feats, figure, ax=None):
     for f in feats:
         paint(ax,  f, True)
 
+    
 
 if __name__ == "__main__":
     import sys
     figure = plt.figure()
     from to_gff import to_gff_lines, Feature
 
-    feats = [f for f in to_gff_lines(sys.argv[1], as_obj=True) if f.seqid == '1']
+    feats = [f for f in to_gff_lines(sys.argv[1], as_obj=True) if f.seqid == sys.argv[2]]
     paint_features(feats, figure)
 
 
