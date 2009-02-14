@@ -1,6 +1,13 @@
 import numpy as np
 import os, sys
 
+def loadblast(fname, npy=True, **kwargs):
+    names = ['query', 'subject', 'pctid', 'hitlen', 'nmismatch', \
+    'ngaps', 'qstart', 'qstop', 'sstart', 'sstop', 'eval', 'score']
+    if not 'names' in kwargs: kwargs['names'] = names
+    return loadtxt(fname, npy=npy, **kwargs)
+
+
 def loadgff(fname, npy=True, **kwargs):
     def _attr(kvstr):
         pairs = [kv.split("=") for kv in kvstr.split(";")]
