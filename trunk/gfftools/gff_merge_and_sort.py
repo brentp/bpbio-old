@@ -29,7 +29,9 @@ def to_id(l):
 to_id.counter = 0
 
 for fi in files:
-    for line in open(fi):
+    if fi == "-": fi = sys.stdin
+    else: fi = open(fi)
+    for line in fi:
         if line[0] == '#': continue
         sline = line.split("\t")
         lines.append((sline[0], sortable_type(sline[2]), int(sline[3]), line))
