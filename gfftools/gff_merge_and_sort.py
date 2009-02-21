@@ -11,10 +11,11 @@ files = sys.argv[1:]
 lines = []
 
 def sortable_type(ft):
-    if ft == 'gene' or ft == 'pseudogene': return 0
+    if ft == 'gene' or ft == 'pseudogene' or ft == 'MIR': return 0
     if ft == 'mRNA': return 1
-    if ft == 'CDS':  return 2
-    return 3
+    if ft == 'exon':  return 3
+    if ft == 'CDS':  return 4
+    return 2
 
 id_re = re.compile("ID=([^;]+)")
 def to_id(l):
