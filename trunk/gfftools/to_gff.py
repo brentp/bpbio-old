@@ -53,9 +53,9 @@ def get_sep(line):
     raise Exception("cant determine separator")
 
 def get_header_map(line, sep):
-    line = sep.split(line.rstrip().lower())
-    assert 'start' in line
-    assert 'stop' in line or 'end' in line
+    line = [x.strip("'\"") for x in sep.split(line.rstrip().lower())]
+    assert 'start' in line, line
+    assert 'stop' in line or 'end' in line, line
     assert 'seqid' in line or 'chr' in line or 'chromosome' in line
     line = (l if l != 'stop' else 'end' for l in line)
     line = (l if (l != 'chr' and l != 'chromosome') else 'seqid' for l in line)
@@ -69,7 +69,7 @@ GFF_ATTRS = ('ID', 'Name', 'Alias', 'Parent', 'Target', 'Gap', 'Note')
 GFF_ATTRS = dict((a.lower(), a) for a in GFF_ATTRS)
 
 def line_to_dict(line, sep, header_map):
-    line = sep.split(line.rstrip())
+    line = [x.strip("'\"") for x in sep.split(line.rstrip())]
     assert len(line) == len(header_map), (sep == "\t", line, header_map)
     d = {'attrs':{}}
     for i, value in enumerate(line):
