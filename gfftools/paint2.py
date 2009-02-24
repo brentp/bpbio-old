@@ -4,13 +4,13 @@ from matplotlib.patches import Rectangle
 from matplotlib.colors import hex2color
 import numpy as np
 
-def make_xaxis(ax, yloc, offset=0.05, **props):
-    xmin, xmax = ax.get_xlim()
-    locs = [loc for loc in ax.xaxis.get_majorticklocs()
-            if loc>=xmin and loc<=xmax]
-    tickline, = ax.plot(locs, [yloc]*len(locs),linestyle='',
-            marker=lines.TICKDOWN, **props)
-    axline, = ax.plot([xmin, xmax], [yloc, yloc], **props)
+def make_yaxis(ax, xloc, offset=0.05, **props):
+    ymin, ymax = ax.get_ylim()
+    locs = [loc for loc in ax.yaxis.get_majorticklocs()
+            if loc>=ymin and loc<=ymax]
+    tickline, = ax.plot([xloc] * len(locs), locs,linestyle='',
+            marker=lines.TICKRIGHT, **props)
+    axline, = ax.plot([xloc, xloc], [ymin, ymax], **props)
     tickline.set_clip_on(False)
     axline.set_clip_on(False)
     for loc in locs:
@@ -23,26 +23,29 @@ def make_xaxis(ax, yloc, offset=0.05, **props):
         else:
             st = str(loc)
         st = st.replace('.0', '')
-        if loc == 1: loc += 0.005 * (xmax - xmin)
+        if loc == 1: loc += 0.005 * (ymax - ymin)
         # if it's close to the edge, bump it a bit.
-        ax.text(loc, yloc-offset, '%s'  %st,
-                horizontalalignment='center',
-                verticalalignment='top')
+        ax.text(xloc + offset, loc, '%s'  %st,
+                fontsize=12,
+                zorder=20000,
+                color='#333333',
+                verticalalignment='center',
+                horizontalalignment='left')
 
-props = dict(color='black', linewidth=1, markeredgewidth=1)
+props = dict(color='#333333', linewidth=2, markeredgewidth=1)
 
 def genomic_axes(fig, bpmin, bpmax, props=props):
-    ax = fig.add_axes((0.0001, 0, .9999, 0.7), frameon=False, yticks=())
+    w = 0.5
+    ax = fig.add_axes((0.0001, 0, .9999, .9999), frameon=False, xticks=())
     ax.axison = False
     ax.set_autoscale_on(False)
 
-    w = bpmax - bpmin #4100003
-    h = 2
-    ax.set_xlim(bpmin, bpmax)
-    ax.set_ylim(-h, h)
+    h = bpmax - bpmin #4100003
+    ax.set_xlim(-w/2, w/2)
+    ax.set_ylim(bpmin, bpmax)
 
-    make_xaxis(ax, 0, offset=0.11, **props)
-    r = Rectangle((0, -h/2), w, h, fc=(1, 1, 1, 1))
+    make_yaxis(ax, 0, offset=0.03 * w, **props)
+    r = Rectangle((-w/2, 0), w, bpmax, fc=(1, 1, 1, 1))
     ax.add_artist(r)
     return ax
 
@@ -65,29 +68,37 @@ def get_colors(f):
 def paint(ax, f, txt):
     if txt is True: txt = f.attribs['ID']
     if txt is False: txt = ''
+    xmin, xmax = ax.get_xlim()
     strand = f.strand == '-' and -1 or 1
     txt = txt[:11]
 
-    x = (f.start + f.end) / 2
-    y = strand * (0.03 if txt else 0.3)
+    y = (f.start + f.end) / 2
+    x = strand * (0.03) #ax.get_xbound()[0]
 
     color, ec = get_colors(f)
 
     if f.attribs.get('span','').lower() in ('true', 't', '1', 'yes', 'y'):
-        vspan = ax.axvspan(f.start, f.end, ymin=ax.get_ybound()[0]/2.,
-                ymax=ax.get_ybound()[1]/2., ec=(0,0,0), zorder=10)
+        vspan = ax.axhspan(f.start, f.end, xmin=0, xmax=1
+                , fill=True
+                , facecolor='0.5'
+                #, hatch='+'
+                , alpha=0.2
+                #, fc=(0.5, 0.5, 0.5)
+                #, ec=(0,0,0)
+                , zorder=10)
         vspan.set_clip_on(True)
     else:
         ax.annotate(txt, xy=(x, y), xycoords='data',
-            xytext=(x, strand * 0.98),
+            xytext=(strand * 0.19 * (xmax - xmin), y),
                 arrowprops=dict(fc=color, ec=ec, width=1.5, headwidth=5,
-                    shrink=0.16),
+                    shrink=0.08),
                 #arrowprops=dict(arrowstyle="wedge,tail_width=0.7",
                 #                fc="0.6", ec="none"),
                 horizontalalignment='right' if f.strand == '-' else 'left',
-            verticalalignment='bottom' if f.strand == '-' else 'top',
+                verticalalignment='center',
             fontsize=10,
-            rotation=45 if txt else None)
+            rotation=None)
+            #rotation=45 if txt else None)
 
 
 
@@ -96,7 +107,7 @@ def paint(ax, f, txt):
 #paint(ax, Feature(1000000, 1000000, '-'), False)
 
 def paint_file(fname, seqid, save_as=None):
-    f = plt.figure()
+    f = plt.figure(figsize=(2,10))
 
 def paint_features(feats, figure, ax=None):
     if ax is None:
@@ -110,7 +121,7 @@ def paint_features(feats, figure, ax=None):
 
 if __name__ == "__main__":
     import sys
-    figure = plt.figure()
+    figure = plt.figure(figsize=(2, 10))
     from to_gff import to_gff_lines, Feature
 
     feats = [f for f in to_gff_lines(sys.argv[1], as_obj=True) if f.seqid == sys.argv[2]]
