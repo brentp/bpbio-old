@@ -6,8 +6,8 @@ version = '0.1'
 
 setup(name='pyfasta',
       version=version,
-      description="a convenience class for dealing with fasta files in python"
-      classifiers=["Topic :: Scientific/Engineering :: Bio-Informatics"], # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
+      description="a convenience class for dealing with fasta files in python",
+      classifiers=["Topic :: Scientific/Engineering :: Bio-Informatics"],
       keywords='bioinformatics blast',
       author='brentp',
       author_email='bpederse@gmail.com',

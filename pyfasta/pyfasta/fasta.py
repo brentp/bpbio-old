@@ -1,6 +1,5 @@
 import os
 import cPickle
-import numpy
 import mmap # 4G limit?
 import string
 import gc
@@ -13,7 +12,7 @@ class Fasta(dict):
         self.fasta_name, self.index = Fasta.flatten(fasta_name, flatten_inplace=flatten_inplace)
         self.fasta_handle = open(self.fasta_name, 'rb+')
         self._chrs = {}
-        self.chr = {}
+        self.chr = None
         self._load_mmap()
 
     @classmethod
@@ -104,17 +103,23 @@ class Fasta(dict):
     def __getitem__(self, i):
         # this implements the lazy loading an only allows a single 
         # memmmap to be open at one time.
-        if i in self.index.keys() and not i in self.chr:
-            if len(self.chr):
-                #self.fasta_handle.close()
-                for last_chr in self.chr.keys():
-                    del self.chr[last_chr]
-                gc.collect()
-                #self.fasta_handle = open(self.fasta_name, 'rb+')
+        assert i in self.index.keys()
+        if i != self.chr:
+            if self.chr: self.chr.close()
             c = self._chrs[i]
             # http://projects.scipy.org/scipy/numpy/browser/trunk/numpy/core/memmap.py#L18
-            self.chr[i] = numpy.memmap(self.fasta_handle, offset=c['offset'], shape=c['shape'], dtype='c')
-        return self.chr[i]
+            #self.chr[i] = numpy.memmap(self.fasta_handle, offset=c['offset'], shape=c['shape'], dtype='c')
+
+            self.chr = mmap.mmap(self.fasta_handle, c['shape'], None,
+                    mmap.ACCESS_COPY, c['offset'])
+        return self.chr
+
+    def close(self):
+        if self.chr: self.chr.close()
+        self.fasta_handle.close()
+
+    def __del__(self):
+        self.close()
 
     @classmethod
     def _load_index(self, fasta):
@@ -122,14 +127,12 @@ class Fasta(dict):
         gdx = open(fasta + '.gdx', 'rb')
         return cPickle.load(gdx)
 
-    def sequence(self, f, asstring=True, auto_rc=True
+    def sequence(self, f, auto_rc=True
             , exon_keys=None):
         """
         take a feature and use the start/stop or exon_keys to return
         the sequence from the assocatied fasta file:
         f: a feature
-        asstring: if true, return the sequence as a string
-                : if false, return as a numpy array
         auto_rc : if True and the strand of the feature == -1, return
                   the reverse complement of the sequence
 
@@ -180,9 +183,7 @@ class Fasta(dict):
 
         if auto_rc and f.get('strand') in ('-1', -1, '-'):
             sequence = complement(sequence)[::-1]
-
-        if asstring: return sequence
-        return numpy.array(sequence, dtype='c')
+        return sequence
 
     def _seq_from_keys(self, f, fasta, exon_keys, base='locations'):
         """Internal:
@@ -201,7 +202,7 @@ class Fasta(dict):
             if not ek in fbase: continue
             locs = fbase[ek]
             seq = ""
-            for start, stop in locs: 
+            for start, stop in locs:
                 seq += fasta[start -1:stop].tostring()
             return seq
         return None
