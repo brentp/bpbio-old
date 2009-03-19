@@ -97,7 +97,17 @@ class IntervalTree(object):
 
         if self.right:
             for r in self.right: yield r
+   
+    # methods to allow un/pickling (by pzs):
+    def __getstate__(self):
+        return { 'intervals' : self.intervals,
+                    'left'   : self.left,
+                    'right'  : self.right,
+                    'center' : self.center }
 
+    def __setstate__(self, state):
+        for key,value in state.iteritems():
+            setattr(self, key, value)
 
 class Interval(object):
     __slots__ = ('start', 'stop')
@@ -106,6 +116,13 @@ class Interval(object):
         self.stop  = stop
     def __repr__(self):
         return "Interval(%i, %i)" % (self.start, self.stop)
+    
+    def __getstate__(self):
+        return {'start': self.start, 
+                'stop': self.stop }
+    def __setstate__(self, state):
+        for k, v in state.iteritems():
+            setattr(self, k, v)
 
 if __name__ == '__main__':
 
@@ -136,6 +153,19 @@ if __name__ == '__main__':
 
     
     assert sum(1 for x in tree) == len(intervals), "iterator not working?"
+
+    intervals = [rand() for i in xrange(300)]
+    atree = IntervalTree(intervals)
+    import cPickle
+    btree = cPickle.loads(cPickle.dumps(atree, -1))
+
+    af = atree.find(START, STOP) 
+    bf = btree.find(START, STOP)
+    assert len(af) == len(bf)
+    for a, b in zip(af, bf):
+        assert a.start == b.start
+        assert a.stop == b.stop
+    
 
     import doctest
     doctest.testmod()
