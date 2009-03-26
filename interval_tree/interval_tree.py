@@ -1,4 +1,5 @@
 import operator
+import psyco; psyco.full()
 
 class IntervalTree(object):
     __slots__ = ('intervals', 'left', 'right', 'center')
@@ -133,17 +134,21 @@ if __name__ == '__main__':
     def rand():
         s = random.randint(1, 2000000)
         return Interval(s, s + random.randint(200, 6000))
-    intervals = [rand() for i in xrange(30000)]
+    intervals = [rand() for i in xrange(300000)]
     START, STOP = 390000, 400000
     intervals.append(Interval(0, 500000))
     tries = 100
 
+    
     tree = IntervalTree(intervals)
     t = time.time()
     for i in range(tries):
         res = tree.find(START, STOP)
     treetime = time.time() - t
     t = time.time()
+    print treetime
+
+    """
 
     for i in range(tries):
         bf = [i for i in intervals if i.stop >= START and i.start <= STOP]
@@ -169,4 +174,4 @@ if __name__ == '__main__':
 
     import doctest
     doctest.testmod()
-
+    """
