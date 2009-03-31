@@ -20,3 +20,9 @@ class BlastLine(object):
     def __repr__(self):
         return "BLine('%s' to '%s', eval=%.3f, score=%.1f)" % (self.query, self.subject, self.eval, self.score)
 
+
+    def to_blast_line(self):
+        #def g(attr):
+        #    return getattr(self, attr)
+        return "\t".join(map(str, (getattr(self, attr) for attr in BlastLine.__slots__)))
+        #return "\t".join(map(str, map(g, BlastLine.__slots__)))
