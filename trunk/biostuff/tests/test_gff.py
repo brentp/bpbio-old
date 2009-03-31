@@ -19,14 +19,14 @@ def test_gff_node():
     n = node_gen.next()
     assert n.parent.end == 8737, n.parent
 
+
+
+def test_gff_line_all():
+    for f in GFFNode.yield_lines(GFF): pass
+
 def test_gff_all():
     for f in GFFNode.yield_nodes(GFF): pass
 
 def test_gff_line():
     line_gen = GFFNode.yield_lines(GFF)
-
     print >>sys.stderr, line_gen
-
-
-def test_gff_line_all():
-    for f in GFFNode.yield_lines(GFF): pass
