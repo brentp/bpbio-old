@@ -2,6 +2,9 @@ import mmap
 import re
 import sys
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
 def _get_non_comment_line(fh):
     while True:
         line = fh.readline()
@@ -9,8 +12,16 @@ def _get_non_comment_line(fh):
         return line
 
 def _get_lines_until_next(fh, parent_ids):
+    """
+    so this just continues to append lines to lines[]
+    until Parent attribute of a line does not match
+    any of the values in parent_ids
+    any time a line is found with a new ID attribute
+    (whose Parent attr matches the current parent_ids list),
+    that line's own ID is added to the parent_ids list"""
+
     lines = [_get_non_comment_line(fh)]
-    while True: #"Parent=" + parent_id in lines[-1]:
+    while True:
         new_parent = False
         for parent_id in parent_ids:
             if 'Parent=' + parent_id in lines[-1]:
@@ -36,8 +47,12 @@ class GFFNode(object):
         self.parent = node_list[0]
         self.nodes = node_list[1:]
 
-        assert self.parent.start == self.start, (self.start, self.parent.start)
-        assert self.parent.end == self.end, (self.end, self.parent.end)
+        if self.parent.start != self.start:
+            logging.debug(("the start of the parent != the start of the item:" + \
+                        ", ".join(map(str, (self, self.start, self.parent.start)))))
+        if self.parent.end != self.end:
+            logging.debug("the end of the parent != the end of the item:" + \
+                    ", ".join(map(str, (self, self.end, self.parent.end))))
     
     def __repr__(self):
         return "GFFNode(%s: %i .. %i, %i sub-nodes)" % \
