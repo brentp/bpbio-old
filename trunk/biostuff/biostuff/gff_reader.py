@@ -5,22 +5,34 @@ import sys
 def _get_non_comment_line(fh):
     while True:
         line = fh.readline()
-        if line[0] == '#': continue
+        if line and line[0] == '#': continue
         return line
 
-def _get_lines_until_next(fh, feature):
+def _get_lines_until_next(fh, parent_ids):
     lines = [_get_non_comment_line(fh)]
-    while not feature in lines[-1]:
-        if not lines[-1]: return lines # end of file
-        lines.append(_get_non_comment_line(fh))
+    while True: #"Parent=" + parent_id in lines[-1]:
+        new_parent = False
+        for parent_id in parent_ids:
+            if 'Parent=' + parent_id in lines[-1]:
+                if not lines[-1]: return lines # end of file
+                lines.append(_get_non_comment_line(fh))
+                if 'ID=' in lines[-1]:
+                    new_parent=True
+                break
+        else:
+            break
+        if new_parent:
+            parent_ids.append(GFFLine(lines[-1]).attribs["ID"])
+            parent_ids = list(set(parent_ids))
+
     return lines
 
 class GFFNode(object):
-    def __init__(self, node_list, top_level_feature='gene'):
+    def __init__(self, node_list):
         self.start = min(n.start for n in node_list)
         self.stop = max(n.stop for n in node_list)
         self.end = self.stop
-        assert node_list[0].type == top_level_feature, node_list[0]
+        assert "ID" in node_list[0].attribs, (node_list[0], node_list[0].attribs)
         self.parent = node_list[0]
         self.nodes = node_list[1:]
 
@@ -34,21 +46,23 @@ class GFFNode(object):
 
 
     @classmethod
-    def yield_nodes(cls, fh, top_level_feature='gene'):
-        gene = top_level_feature
+    def yield_nodes(cls, fh):
         close = False
         if not hasattr(fh, 'read'):
             close = True
             fh = open(fh, 'r')
 
         next_gene_line = _get_non_comment_line(fh)
-        while True:
-            assert gene in next_gene_line
-            block = _get_lines_until_next(fh, gene)
+        while next_gene_line:
+            assert "ID=" in next_gene_line,\
+                    ("should have an id to be a parent feature",)
+
+            parent = GFFLine(next_gene_line)
+            block = _get_lines_until_next(fh, [parent.attribs["ID"]])
             block.insert(0, next_gene_line)
             next_gene_line = block.pop()
 
-            yield GFFNode([GFFLine(l) for l in block], top_level_feature=gene)
+            yield GFFNode([GFFLine(l) for l in block])
 
 
         if close: fh.close()
