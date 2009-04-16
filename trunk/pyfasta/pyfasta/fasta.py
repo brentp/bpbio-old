@@ -3,6 +3,7 @@ import cPickle
 import mmap # 4G limit?
 import string
 import gc
+import operator
 
 _complement = string.maketrans('ATCGatcgNnXx', 'TAGCtagcNnXx')
 complement  = lambda s: s.translate(_complement)
@@ -11,6 +12,7 @@ class Fasta(dict):
     def __init__(self, fasta_name, flatten_inplace=True):
         self.fasta_name, self.index = Fasta.flatten(fasta_name, flatten_inplace=flatten_inplace)
         self.fasta_handle = open(self.fasta_name, 'rb+')
+        self.fileno = self.fasta_handle.fileno()
         self._chrs = {}
         self.chr = None
         self._load_mmap()
@@ -18,7 +20,7 @@ class Fasta(dict):
     @classmethod
     def is_up_to_date(klass, a, b):
         # need the + 10 because the index is created after the index file
-        return os.path.exists(a) and os.stat(a).st_mtime + 10 > os.stat(b).st_mtime
+        return os.path.exists(a) and os.stat(a).st_mtime >= os.stat(b).st_mtime
 
 
     @classmethod
@@ -80,7 +82,7 @@ class Fasta(dict):
             shutil.copyfile(save_to, fasta)
             os.unlink(save_to)
             save_to = fasta
-        except: 
+        except:
             # it wasn't a tempfile. ignore
             pass
 
@@ -107,12 +109,19 @@ class Fasta(dict):
         if i != self.chr:
             if self.chr: self.chr.close()
             c = self._chrs[i]
-            # http://projects.scipy.org/scipy/numpy/browser/trunk/numpy/core/memmap.py#L18
-            #self.chr[i] = numpy.memmap(self.fasta_handle, offset=c['offset'], shape=c['shape'], dtype='c')
+            self.fasta_handle.seek(0)
+            try:
+                self.chr = mmap.mmap(self.fasta_handle.fileno(), int(c['offset'] + c['shape'][0]),\
+                    mmap.MAP_SHARED,\
+                    mmap.PROT_READ | mmap.PROT_WRITE,\
+                    mmap.ACCESS_COPY)
+            except:
+                import sys
+                print >>sys.stderr, c, i
+                raise
 
-            self.chr = mmap.mmap(self.fasta_handle, c['shape'], None,
-                    mmap.ACCESS_COPY, c['offset'])
-        return self.chr
+                    #c['offset'])
+        return self.chr[c['offset']:]
 
     def close(self):
         if self.chr: self.chr.close()
@@ -128,7 +137,7 @@ class Fasta(dict):
         return cPickle.load(gdx)
 
     def sequence(self, f, auto_rc=True
-            , exon_keys=None):
+            , exon_keys=None, getter=operator.itemgetter):
         """
         take a feature and use the start/stop or exon_keys to return
         the sequence from the assocatied fasta file:
@@ -136,10 +145,13 @@ class Fasta(dict):
         auto_rc : if True and the strand of the feature == -1, return
                   the reverse complement of the sequence
 
-            >>> from genedex import Fasta
             >>> f = Fasta('tests/data/three_chrs.fasta')
             >>> f.sequence({'start':1, 'stop':2, 'strand':1, 'chr': 'chr1'})
             'AC'
+            >>> f.sequence({'start':1, 'stop':4, 'strand':1, 'chr': 'chr3'})
+            'ACGC'
+            >>> f['chr2'][-2:]
+            'AT'
 
         NOTE: these 2 are reverse-complement-ary because of strand
             >>> f.sequence({'start':10, 'stop':12, 'strand': -1, 'chr': 'chr1'})
@@ -179,7 +191,7 @@ class Fasta(dict):
             sequence = self._seq_from_keys(f, fasta, exon_keys)
 
         if sequence is None:
-            sequence = fasta[f['start'] -1: f['stop']].tostring()
+            sequence = fasta[f['start'] -1: f['stop']]
 
         if auto_rc and f.get('strand') in ('-1', -1, '-'):
             sequence = complement(sequence)[::-1]
@@ -203,7 +215,7 @@ class Fasta(dict):
             locs = fbase[ek]
             seq = ""
             for start, stop in locs:
-                seq += fasta[start -1:stop].tostring()
+                seq += fasta[start -1:stop]
             return seq
         return None
 
