@@ -1,5 +1,6 @@
 from setuptools import setup, find_packages
-import sys, os
+from distutils.extension import Extension
+from Cython.Distutils import build_ext
 
 version = '0.0'
 
@@ -8,6 +9,8 @@ setup(name='biostuff',
       description="",
       long_description="""\
 """,
+      ext_modules=[ Extension("biostuff/cblastline",
+                      sources=["biostuff/cblastline.pyx"],)],
       classifiers=[], # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
       keywords='bio',
       author='brentp',
@@ -21,7 +24,8 @@ setup(name='biostuff',
       install_requires=[
           # -*- Extra requirements: -*-
       ],
-      entry_points="""
-      # -*- Entry points: -*-
-      """,
+      entry_points= {
+          # -*- Entry points: -*-
+          'console_scripts': ['biostuff = biostuff:main']
+          }
       )
