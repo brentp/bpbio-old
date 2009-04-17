@@ -1,5 +1,7 @@
 from biostuff import BlastLine
 
+some_attrs = ('qstart', 'qstop', 'sstart', 'sstop', 'pctid', 'score', 'query',
+        'subject')
 
 def test_blastline():
     f = "tests/data/tabd.blast" 
@@ -10,7 +12,7 @@ def test_blastline():
     yield check_type, blasts, ('qstart', 'qstop', 'sstart', 'sstop',
         'nmismatch', 'ngaps'), int
 
-    yield check_type, blasts, ('eval', 'score', 'pctid'), float
+    yield check_type, blasts, ('evalue', 'score', 'pctid'), float
     yield check_type, blasts, ('query', 'subject'), str
     
 
@@ -27,5 +29,5 @@ def test_to_string():
         b = BlastLine(a.to_blast_line())
 
         # works better than string comparison because of floats.
-        for attr in a.__slots__:
+        for attr in some_attrs:
             assert getattr(a, attr) == getattr(b, attr), (a, b, attr)
