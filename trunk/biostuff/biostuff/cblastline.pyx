@@ -25,7 +25,7 @@ cdef class BlastLine:
     """
     cdef public int hitlen, nmismatch, ngaps, qstart, qstop, sstart, sstop
     cdef public float pctid, score, evalue
-    cdef public char query[32], subject[32]
+    cdef public char query[48], subject[48]
 
     def __init__(self, char *sline):
         sscanf(sline, blast_format, self.query, self.subject,
@@ -39,7 +39,11 @@ cdef class BlastLine:
             % (self.query, self.subject, self.pctid, self.evalue, self.score)
 
 
-    def to_blast_line(self):
+    def to_blast_line(self, as_str=True):
         attrs = ('query', 'subject', 'pctid', 'hitlen', 'nmismatch', 'ngaps', \
                  'qstart', 'qstop', 'sstart', 'sstop', 'evalue', 'score')
-        return "\t".join(map(str, [getattr(self, attr) for attr in attrs]))
+        if as_str:
+            return "\t".join(map(str, [getattr(self, attr) for attr in attrs]))
+        else:
+            return [getattr(self, attr) for attr in attrs]
+
