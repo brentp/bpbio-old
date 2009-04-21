@@ -9,11 +9,17 @@ import sys
 cdef extern from "stdlib.h":
     ctypedef unsigned int size_t
     size_t strlen(char *s)
+    
+
+
     void *malloc(size_t size)
     void free(void *ptr)
 
 cdef extern from "Python.h":
-    object PyString_FromStringAndSize(char *, size_t)
+    ctypedef void PyObject
+    PyObject *PyString_FromStringAndSize(char *, size_t)
+    int _PyString_Resize(PyObject **, size_t)
+    char * PyString_AS_STRING(PyObject *)
 
 ctypedef np.int_t DTYPE_INT
 ctypedef np.uint_t DTYPE_UINT
@@ -27,35 +33,54 @@ cdef inline int imax2(int a, int b):
     return b
 
 
+@cython.boundscheck(False)
 def read_matrix(path):
+    cdef np.ndarray[DTYPE_INT, ndim=2] a
+    cdef size_t ai = 0, i
+    cdef int v
+
     if path in MATRIX: return MATRIX[path]
-    m = {}
+
     fh = open(path)
     headers = None
     while headers is None:
         line = fh.readline().strip()
         if line[0] == '#': continue
         headers = [x for x in line.split(' ') if x]
-        for h in headers: m[h] = {}
 
     line = fh.readline()
+    a = np.ndarray((len(headers), len(headers)), dtype=np.int)
+
     while line:
-        h1 = line[0]
-        line = [int(x) for x in line[1:-1].split(' ') if x]
-        values = zip(headers, line)
-        m[h1] = dict(values)
+        line = [int(x) for x in line[:-1].split(' ')[1:] if x]
+        for i in range(len(line)):
+            v = line[i]
+            a[ai, i] = v
+        ai += 1
         line = fh.readline()
-    return m
+    assert ai == len(headers), (ai, len(headers))
+    return "".join(headers), a
+
+cdef inline size_t strpos(char *tstr, char check):
+    cdef size_t i = 0
+    cdef size_t slen = strlen(tstr)
+    while i < slen:
+        if tstr[i] == check: return i
+        i += 1
+    return -1
+
 
 @cython.boundscheck(False)
-cdef global_align(object _seqj, object _seqi, int gap, int match, int mismatch, object matrix):
+cpdef global_align(object _seqj, object _seqi, int gap=-1, int match=1, int mismatch=-1, object matrix=None):
     """
     perform a global sequence alignment (needleman-wunsch) on seq and and 2. using
     the matrix for nucleotide transition from matrix if available.
     where matrix is of the format provided in the ncbi/data directory.
 
+    >>> from nwalign import global_align
     >>> global_align('COELANCANTH', 'PELICAN')
     ('COELANCANTH', '-PEL-ICAN--')
+
     """
     cdef char* seqj = _seqj
     cdef char* seqi = _seqi
@@ -65,23 +90,23 @@ cdef global_align(object _seqj, object _seqi, int gap, int match, int mismatch, 
     cdef size_t i, j, seqlen, align_counter = 0, p
     cdef int diag_score, up_score, left_score, tscore
 
-    cdef char *align_j, *align_i
+    cdef char *align_j, *align_i, *sheader
     cdef char ci, cj
+    cdef size_t ii, jj
+    cdef PyObject *ai, *aj
 
 
     cdef np.ndarray[DTYPE_INT, ndim=2] score = np.zeros((max_i + 1, max_j + 1), dtype=np.int)
     cdef np.ndarray[DTYPE_UINT, ndim=2] pointer = np.zeros((max_i + 1, max_j + 1), dtype=np.uint)
+    cdef np.ndarray[DTYPE_INT, ndim=2] amatrix
 
 
     if matrix is not None:
-        matrix = read_matrix(matrix)
+        pyheader, amatrix = read_matrix(matrix)
+        sheader = pyheader
   
-    #score   = np.zeros((max_i + 1, max_j + 1), dtype='f')
-    #pointer = np.zeros((max_i + 1, max_j + 1), dtype='i')
-
     pointer[<size_t>0, <size_t>0] = NONE
     score[<size_t>0, <size_t>0] = 0
-
     
     pointer[<size_t>0, <size_t>1:] = LEFT
     pointer[<size_t>1:, <size_t>0] = UP
@@ -97,14 +122,17 @@ cdef global_align(object _seqj, object _seqi, int gap, int match, int mismatch, 
             if matrix is None:
                 diag_score = score[i - 1, j - 1] + (cj == ci and match or mismatch)
             else:
-                try:
-                    py_ci = PyString_FromStringAndSize(&ci, <size_t>1)
-                    py_cj = PyString_FromStringAndSize(&cj, <size_t>1)
-                    tscore = matrix[py_cj][py_ci]
-                    diag_score = score[i - 1, j - 1] + tscore
-                except:
-                    print (cj + c'0'), ci, "not in matrix"
-                    raise
+                ii = strpos(sheader, ci)
+                jj = strpos(sheader, cj)
+                if ii == -1:
+                    py_ci = <object>PyString_FromStringAndSize(&ci, <size_t>1)
+                    raise Exception(py_ci + "from: " + seqi  + " not in scoring matrix")
+                if jj == -1:
+                    py_cj = <object>PyString_FromStringAndSize(&cj, <size_t>1)
+                    print py_cj, "not in string:", seqj
+                    raise Exception(py_cj + "from: " + seqj + " not in scoring matrix")
+                tscore = amatrix[ii, jj]
+                diag_score = score[i - 1, j - 1] + tscore
 
             up_score   = score[i - 1, j] + gap
             left_score = score[i, j - 1] + gap
@@ -124,9 +152,14 @@ cdef global_align(object _seqj, object _seqi, int gap, int match, int mismatch, 
                 else:
                     score[i, j]   = left_score
                     pointer[i, j] = LEFT
-    seqlen = imax2(i, j)
-    align_j = <char *>malloc(seqlen * sizeof(char))
-    align_i = <char *>malloc(seqlen * sizeof(char))
+
+    seqlen = max_i + max_j
+    ai = PyString_FromStringAndSize(NULL, seqlen)
+    aj = PyString_FromStringAndSize(NULL, seqlen)
+
+    # had to use this and PyObject instead of assigning directly...
+    align_j = PyString_AS_STRING(aj)
+    align_i = PyString_AS_STRING(ai)
         
     while True:
         p = pointer[i, j]
@@ -148,11 +181,9 @@ cdef global_align(object _seqj, object _seqi, int gap, int match, int mismatch, 
             raise Exception('wtf!')
         align_counter += 1
 
-    try:
-        return str(align_j)[:align_counter][::-1], str(align_i)[:align_counter][::-1]
-    finally:
-        free(align_j)
-        free(align_i)
+    _PyString_Resize(&aj, align_counter)
+    _PyString_Resize(&ai, align_counter)
+    return (<object>aj)[::-1], (<object>ai)[::-1]
             
 def main():
     import optparse
