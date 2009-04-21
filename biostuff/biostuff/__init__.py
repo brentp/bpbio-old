@@ -4,6 +4,7 @@ from gff_reader import GFFNode, GFFLine
 
 
 def main():
+    import sys
     progs = ['cblastline']
     if len(sys.argv) == 1 or not sys.argv[1] in progs:
         print """Usage:
@@ -19,5 +20,4 @@ where current prog's are: %s
         mod.main()
 
 if __name__ == "__main__":
-    import sys
     main()
