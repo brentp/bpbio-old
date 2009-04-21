@@ -16,7 +16,9 @@ where current prog's are: %s
         """ % "\n".join(progs)
     else:
         prog = sys.argv.pop(1)
-        mod = __import__(prog)
+        print prog
+        mod = __import__('biostuff.' + prog, fromlist=['main'])
+        print mod
         mod.main()
 
 if __name__ == "__main__":
