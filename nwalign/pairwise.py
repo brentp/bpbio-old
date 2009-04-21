@@ -80,8 +80,6 @@ def global_align(seqj, seqi, gap=-1, matrix=None, match=1, mismatch=-1):
                     pointer[i, j] = LEFT
                     
                 
-    print score
-    print pointer
     align_j = ""
     align_i = ""
     while True:
