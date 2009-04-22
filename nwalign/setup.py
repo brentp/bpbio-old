@@ -20,7 +20,7 @@ setup(name='nwalign',
       author_email='bpederse@gmail.com',
       url='',
       license='BSD',
-      packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
+      packages=find_packages(exclude=['ez_setup', 'examples', 'tests']), # + ['.'],
       test_suite='nose.collector',
       include_package_data=True,
       zip_safe=False,
@@ -30,5 +30,7 @@ setup(name='nwalign',
       entry_points= {
           # -*- Entry points: -*-
           'console_scripts': ['nwalign = nwalign:main']
-          }
+          },
+      #package_data={'': ['data/*.pkl']},
+      #data_files=['data/*.pkl']
       )
