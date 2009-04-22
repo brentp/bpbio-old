@@ -39,6 +39,7 @@ def _get_lines_until_next(fh, parent_ids):
     return lines
 
 class GFFNode(object):
+    __slots__ = ('start', 'stop', 'end', 'parent', 'nodes', 'seqid')
     def __init__(self, node_list):
         self.start = min(n.start for n in node_list)
         self.stop = max(n.stop for n in node_list)
@@ -46,6 +47,7 @@ class GFFNode(object):
         assert "ID" in node_list[0].attribs, (node_list[0], node_list[0].attribs)
         self.parent = node_list[0]
         self.nodes = node_list[1:]
+        self.seqid = self.parent.seqid
 
         if self.parent.start != self.start:
             logging.debug(("the start of the parent != the start of the item:" + \
@@ -123,3 +125,24 @@ class GFFLine(object):
         return "GFFLine(%s %s:%i .. %i)" % (self.seqid,
                           self.attrs.get("ID", ""), self.start, self.end)
 
+
+
+class GFFDict(dict):
+    def __init__(self, gff_path):
+        self.gff_path = gff_path
+        self.load_gff(gff_path)
+        self.chrs = {}
+
+
+    def load_gff(self, gff_path):
+
+        for gffnode in GFFNode.yield_nodes(gff_path):
+            s = gffnode.seqid
+            if not s in self.chrs: self.chrs[s] = {}
+            self.chrs[s][gffnode.parent.attribs['ID']] = gffnode
+
+    def __getitem__(self, k):
+        for achr in self.chrs:
+            try: return self.chrs[achr][k]
+            except KeyError: continue
+        raise KeyError
