@@ -10,11 +10,6 @@ import os.path
 cdef extern from "stdlib.h":
     ctypedef unsigned int size_t
     size_t strlen(char *s)
-    
-
-
-    void *malloc(size_t size)
-    void free(void *ptr)
 
 cdef extern from "Python.h":
     ctypedef void PyObject
