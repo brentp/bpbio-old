@@ -1,0 +1,32 @@
+<html>
+    <head>
+        <script type="text/javascript">
+            var onChange = function(){
+                document.forms[0].submit();
+            };
+        </script>
+    </head>
+
+    <body>
+        <a href="${home}">Upload a new CSV file</a>
+<form action="${hashed}">
+    Choose a sequence id to plot:<br/>
+<div style="float:left;width:300px">
+<select name="seqid" onchange="onChange()" size="${ min(len(seqids), 8)}">
+    % for seqid in seqids:
+        <option value="${seqid}" ${"SELECTED" if seqid == aseqid else ""}>${seqid}</option>
+    % endfor
+</select>
+</div>
+<div style="float:left">
+    width: <input type="text" name="width" value=${width} size="5" onchange="onChange()" /><br/>
+    height: <input type="text" name="height" value=${height} size="5" onchange="onChange()" /><br/>
+</div>
+<div style="clear:both"></div>
+<br/>
+
+
+</form>
+</body>
+<img src="${pngpath}" />
+</html>
