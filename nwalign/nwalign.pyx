@@ -90,8 +90,8 @@ cpdef global_align(object _seqj, object _seqi, int gap=-1, int match=1, int mism
     cdef char* seqj = _seqj
     cdef char* seqi = _seqi
 
-    cdef int max_j = strlen(seqj)
-    cdef int max_i = strlen(seqi)
+    cdef size_t max_j = strlen(seqj)
+    cdef size_t max_i = strlen(seqi)
     cdef size_t i, j, seqlen, align_counter = 0, p
     cdef int diag_score, up_score, left_score, tscore
 
