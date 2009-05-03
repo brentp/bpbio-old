@@ -175,6 +175,7 @@ def handle_temps(args):
                            (".%s" % (seqid, )) + ".fasta"
 
         
+        assert os.path.exists(fa)
         out_name = os.path.join(d, out_name)
         fh = open(fa, 'rb')
         log.debug('creating sub-file %s' % out_name)
@@ -195,6 +196,8 @@ def handle_temps(args):
                 # snip it at the end.
                 seq += line.rstrip()
         if header is None:
+            out.close()
+            os.unlink(out_name)
             raise Exception("no fasta with name %s containing seq %s"
                             % (fa, seqid))
         if start is not None:
