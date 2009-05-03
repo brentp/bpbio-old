@@ -19,6 +19,7 @@ setup(name='bblast',
       packages=find_packages(exclude=['ez_setup', 'examples', 'tests'] +
                              ["."]),
       include_package_data=True,
+      test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
           # -*- Extra requirements: -*-

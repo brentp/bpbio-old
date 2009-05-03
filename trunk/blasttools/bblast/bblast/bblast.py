@@ -31,10 +31,10 @@ def is_same_blast_params(blast_file, cmd):
     if not os.path.exists(params_file): return False
     return cmd.strip() == open(params_file).read().strip()
 
-def sh(cmd, blog=None):
+def sh(cmd, blast_log=None):
     """ run a commmand in the shell"""
-    if not blog is None:
-        cmd += " 2>%s" % blog
+    if not blast_log is None:
+        cmd += " 2>%s" % blast_log
     log.debug(cmd)
     proc = Popen(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True)
     r = proc.communicate()
@@ -105,7 +105,7 @@ def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False, blast_log='
         fh = open(blast_file + ".cmd", "w")
         fh.write(cmd)
         fh.close()
-        sh(cmd, blog=blast_log)
+        sh(cmd, blast_log=blast_log)
         if os.path.exists(blast_file):
             lines = sum(1 for line in open(blast_file))
             log.debug("\n\n%s lines of blast output sent to %s" % (lines, blast_file))
@@ -119,6 +119,93 @@ def check_args(args):
     assert "i" in args, "need to specify a query fasta"
     assert "d" in args, "need to specify a query fasta"
     if not "a" in args: args["a"] = "4"
+
+
+def handle_temps(args):
+    """allow the query (-i) and subject (-d) to be specified as e.g.:
+        a.fasta['chr1'][200:500]
+    this will create a temporary file of just that chromosome and/or region
+    and blast it 
+    >>> args = {'i': 'tests/a.fasta', 'd': 'tests/a.fasta'}
+    >>> handle_temps(args)
+    >>> args['i']
+    'tests/a.fasta'
+
+    >>> args['d']
+    'tests/a.fasta'
+
+    >>> args['i'] = 'tests/a.fasta["chr2"]'
+    >>> try: handle_temps(args) #doctest: +ELLIPSIS
+    ... except Exception, e: 
+    ...     assert 'no fasta with name' in str(e)
+
+    >>> args['i'] = 'tests/a.fasta[chr1]'
+    >>> handle_temps(args) 
+    >>> args['i']
+    'tests/a.chr1.fasta'
+    
+    >>> args['d']
+    'tests/a.fasta'
+
+
+    >>> args['d'] = 'tests/a.fasta[chr1][20:25]'
+    >>> handle_temps(args) 
+    >>> args['d']
+    'tests/a.chr1_20_25.fasta'
+
+    >>> open(args['d']).read() #doctest: +NORMALIZE_WHITESPACE
+    '>chr1\\nGGGGGG\\n'
+    """
+
+
+    
+    def _h(fname):
+        if not "[" in fname: return fname
+        start = None
+        fname = fname.split("[")
+        d = os.path.dirname(fname[0])
+        if len(fname) == 3:
+            fa, seqid, start_stop = [x.rstrip(']').strip("'\"") for x in fname]
+            start, stop = [int(x) for x in start_stop.split(":")]
+            out_name = os.path.basename(os.path.splitext(fa)[0]) + \
+                           (".%s_%s_%s" % (seqid, start, stop)) + ".fasta"
+        else:
+            fa, seqid = [x.rstrip(']').strip("'\"") for x in fname]
+            out_name = os.path.basename(os.path.splitext(fa)[0]) + \
+                           (".%s" % (seqid, )) + ".fasta"
+
+        
+        out_name = os.path.join(d, out_name)
+        fh = open(fa, 'rb')
+        log.debug('creating sub-file %s' % out_name)
+        out = open(out_name, 'wb')
+        header = None
+        seq = ""
+        for line in fh:
+            if header is None:
+                if line[1:].strip() != seqid: continue
+                header = line[1:].strip()
+                print >>out, '>%s' % header
+                continue
+            elif line[0] == '>': break
+            if start is None:
+                print >>out, line,
+            elif len(seq) <= (stop - start):
+                # just hold the entire thing in memory and
+                # snip it at the end.
+                seq += line.rstrip()
+        if header is None:
+            raise Exception("no fasta with name %s containing seq %s"
+                            % (fa, seqid))
+        if start is not None:
+            print >>out, seq[start - 1:stop]
+        fh.close()
+        out.close()
+        return out_name
+
+
+    args['i'] = _h(args['i'])
+    args['d'] = _h(args['d'])
 
 
 if __name__ == "__main__":
@@ -141,11 +228,11 @@ if __name__ == "__main__":
          or 
             -o F
 
-         in which case the blast output file will be created
+         in the former case the blast output file will be created
          from the names of the input fasta files and placed in the
          directory of the query fasta
          in the latter case, the blast file will go to the current
-         direcotry
+         directory
 
             --full_name T
 
@@ -169,5 +256,7 @@ if __name__ == "__main__":
     if not "d" in args:
         print "need to specify a subject fasta (-d)"
         sys.exit()
+
+    handle_temps(args)
     
     blast(args, full_name=full_name)
