@@ -181,6 +181,9 @@ def handle_temps(args):
         
         assert os.path.exists(fa)
         out_name = os.path.join(d, out_name)
+        if os.path.exists(out_name) and is_current_file(out_name, fa):
+            return out_name
+
         fh = open(fa, 'rb')
         log.debug('creating sub-file %s' % out_name)
         out = open(out_name, 'wb')
