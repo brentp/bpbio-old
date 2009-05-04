@@ -106,9 +106,11 @@ def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False, blast_log='
         fh.write(cmd)
         fh.close()
         try:
-            sh(cmd, blog=blast_log)
+            sh(cmd, blast_log=blast_log)
         except:
-            os.unlink(blast_file)
+            if os.path.exists(blast_file):
+                os.unlink(blast_file)
+            raise
 
         if os.path.exists(blast_file):
             lines = sum(1 for line in open(blast_file))
@@ -179,7 +181,7 @@ def handle_temps(args):
                            (".%s" % (seqid, )) + ".fasta"
 
         
-        assert os.path.exists(fa)
+        assert os.path.exists(fa), fa
         out_name = os.path.join(d, out_name)
         if os.path.exists(out_name) and is_current_file(out_name, fa):
             return out_name
@@ -204,11 +206,13 @@ def handle_temps(args):
                 seq += line.rstrip()
         if header is None:
             out.close()
-            os.unlink(out_name)
+            try:
+                os.unlink(out_name)
+            except: pass
             raise Exception("no fasta with name %s containing seq %s"
                             % (fa, seqid))
         if start is not None:
-            print >>out, seq[start - 1:stop]
+            print >>out, seq[max(0, start - 1):stop]
         fh.close()
         out.close()
         return out_name
