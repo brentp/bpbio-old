@@ -105,7 +105,11 @@ def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False, blast_log='
         fh = open(blast_file + ".cmd", "w")
         fh.write(cmd)
         fh.close()
-        sh(cmd, blast_log=blast_log)
+        try:
+            sh(cmd, blog=blast_log)
+        except:
+            os.unlink(blast_file)
+
         if os.path.exists(blast_file):
             lines = sum(1 for line in open(blast_file))
             log.debug("\n\n%s lines of blast output sent to %s" % (lines, blast_file))
