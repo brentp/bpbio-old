@@ -13,7 +13,12 @@ class FastaTest(unittest.TestCase):
     
     def test_mmap(self):
         seq = self.f['chr2']
+        self.assertEqual(seq[0], 'T')
+        self.assertEqual(seq[1], 'A')
+
         self.assertEqual(seq[-1], 'T')
+        self.assertEqual(seq[-2], 'A')
+
         self.assertEqual(seq[0], 'T')
         self.assertEqual(seq[6:9], 'AAA')
 
