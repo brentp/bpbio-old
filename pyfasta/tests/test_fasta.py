@@ -4,7 +4,7 @@ import unittest
 class FastaTest(unittest.TestCase):
 
     def setUp(self):
-        self.f = Fasta('tests/data/three_chrs.fasta', flatten_inplace=False) 
+        self.f = Fasta('tests/data/three_chrs.fasta')
 
     def test_keys(self):
 
@@ -23,7 +23,7 @@ class FastaTest(unittest.TestCase):
 
     def test_tostring(self):
         s = 'TAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAT'
-        self.assertEqual(self.f['chr2'], s)
+        self.assertEqual(str(self.f['chr2']), s)
 
 
     def test_slice(self):
@@ -38,8 +38,8 @@ class FastaTest(unittest.TestCase):
 
     def tearDown(self):
         import os
-        os.unlink('tests/data/three_chrs.flat.fasta')
-        os.unlink('tests/data/three_chrs.flat.fasta.gdx')
+        os.unlink('tests/data/three_chrs.fasta.gz')
+        os.unlink('tests/data/three_chrs.fasta.gdx')
 
 
 if __name__ == "__main__":

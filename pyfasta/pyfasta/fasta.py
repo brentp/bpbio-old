@@ -1,98 +1,118 @@
 import os
 import cPickle
-import mmap # 4G limit?
+import numpy as np
 import string
 import gc
-import operator
+import gzip
+import mmap
+import sys
 
 _complement = string.maketrans('ATCGatcgNnXx', 'TAGCtagcNnXx')
 complement  = lambda s: s.translate(_complement)
 
+
+class FastaGz(gzip.GzipFile):
+    __slots__ = ('__len__', 'gz_name', 'length', '_offset', 'mode', 'seek', 'read')
+
+    def __init__(self, gz_name, length, offset):
+        self.gz_name = gz_name
+        self.length = length
+        self._offset    = offset
+        gzip.GzipFile.__init__(self, gz_name, mode='rb')
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, islice):
+
+        if isinstance(islice, int):
+            if islice < 0:
+                self.seek(self._offset + self.length - islice)
+                return self.read(1)
+            else:
+                self.seek(self._offset + islice)
+                return self.read(1)
+
+        if islice.start == 0 and islice.stop == sys.maxint:
+            self.seek(self._offset)
+            return self.read(self.length - 10)
+
+        #if islice.start > islice.stop:
+            #    self.seek(self._offset + islice.stop)
+            #l = islice.start - islice.stop
+            #return complement(self.read(l))[::-1]
+
+        self.seek(self._offset + islice.start)
+        l = islice.stop - islice.start
+        if islice.step in (1, None):
+            return self.read(l)
+
+        #elif islice.step == -1:
+            #seq = self.read(l)
+            #return complement(seq)[::-1]
+
+    def __str__(self):
+        return self[:]
+
 class Fasta(dict):
-    def __init__(self, fasta_name, flatten_inplace=True):
-        self.fasta_name, self.index = Fasta.flatten(fasta_name, flatten_inplace=flatten_inplace)
-        self.fasta_handle = open(self.fasta_name, 'rb+')
-        self.fileno = self.fasta_handle.fileno()
+    def __init__(self, fasta_name):
+        self.fasta_name = fasta_name
+        self.gdx = fasta_name + ".gdx"
+        self.gz = fasta_name + ".gz"
+        self.index = self.gzify()
+
         self._chrs = {}
-        self.chr = None
+        self.chr = {}
         self._load_mmap()
 
     @classmethod
     def is_up_to_date(klass, a, b):
-        # need the + 10 because the index is created after the index file
-        return os.path.exists(a) and os.stat(a).st_mtime >= os.stat(b).st_mtime
+        return os.path.exists(a) and os.stat(a).st_mtime > os.stat(b).st_mtime
 
 
-    @classmethod
-    def flatten(self, fasta, flatten_inplace=True):
+    def gzify(self):
         """remove all newlines from the sequence in a fasta file"""
-        # if save_to is None: modify the file inplace 
 
-        gdx = None
-        if not flatten_inplace:
-            idx = fasta.rfind('.fa')
-            if idx < 0: idx = len(fasta)
-            save_to = fasta[:idx] + '.flat' + fasta[idx:]
-            gdx = save_to + ".gdx"
-            # if the index isnt up to date, reflatten the file.
-            if Fasta.is_up_to_date(gdx, fasta):
-                return save_to, Fasta._load_index(save_to)
+        if Fasta.is_up_to_date(self.gdx, self.fasta_name) \
+                     and Fasta.is_up_to_date(self.gz, self.fasta_name):
+            return Fasta._load_index(self.gdx)
 
 
-        if flatten_inplace:
-            gdx = fasta + '.gdx' 
-            # it was modified inplace already.
-            if Fasta.is_up_to_date(gdx, fasta):
-                return fasta, Fasta._load_index(fasta)
-            
-            # in order to flatten 'inplace', actually
-            # make a tempfile and then overwrite the original.
-            import shutil, tempfile
-            save_to = tempfile.mktemp('.fasta')
+        out = gzip.open(self.gz, 'wb')
 
-        size = os.path.getsize(fasta)
-        fh = open(fasta, 'r+')
-        out = open(save_to, 'w')
+        fh = open(self.fasta_name, 'r+')
+        mm = mmap.mmap(fh.fileno(), os.path.getsize(self.fasta_name))
 
-        mm = mmap.mmap(fh.fileno(), size)
-
+        # do the flattening (remove newlines)
         sheader = mm.find('>')
         snewline = mm.find('\n', sheader)
         idx = {}
+        pos = 0
         while sheader < len(mm):
             header = mm[sheader:snewline + 1]
-            out.write(header)
+            #out.write(header)
 
             sheader = mm.find('>', snewline)
             if sheader == -1: sheader = len(mm)
 
             seq  = mm[snewline + 1: sheader].replace('\n','')
-            out.write(seq + '\n')
+            out.write(seq)
             out.flush()
-            pos = out.tell()
-            idx[header[1:].strip()] = (pos - len(seq) - 1, pos)
+            p1 = out.tell()
+            idx[header[1:].strip()] = (pos, p1)
+            pos = p1 + 1
 
             snewline = mm.find('\n', sheader)
 
-        p = open(gdx, 'wb') 
+        p = open(self.gdx, 'wb')
         cPickle.dump(idx, p)
         p.close(); fh.close(); out.close()
-
-        try:
-            shutil.copyfile(save_to, fasta)
-            os.unlink(save_to)
-            save_to = fasta
-        except:
-            # it wasn't a tempfile. ignore
-            pass
-
-        return save_to, idx
+        return idx
 
     def _load_mmap(self):
         for name, (start, stop) in self.index.iteritems():
             # lazy, so the memmap isnt loaded until it's requested.
-            # TODO. simplify this by just using self.index
-            self._chrs[name] = {'offset': start, 'shape': (stop - start -1,) }
+            self._chrs[name] = {'offset': start, 'length': stop - start - 1 }
 
     def iterkeys():
         for k in self.keys(): yield k
@@ -105,59 +125,59 @@ class Fasta(dict):
     def __getitem__(self, i):
         # this implements the lazy loading an only allows a single 
         # memmmap to be open at one time.
-        assert i in self.index.keys()
-        if i != self.chr:
-            if self.chr: self.chr.close()
-            c = self._chrs[i]
-            self.fasta_handle.seek(0)
-            try:
-                self.chr = mmap.mmap(self.fasta_handle.fileno(), int(c['offset'] + c['shape'][0]),\
-                    mmap.MAP_SHARED,\
-                    mmap.PROT_READ | mmap.PROT_WRITE,\
-                    mmap.ACCESS_COPY)
-            except:
-                import sys
-                print >>sys.stderr, c, i
-                raise
+        if i in self.chr:
+            return self.chr[i]
 
-                    #c['offset'])
-        return self.chr[c['offset']:]
-
-    def close(self):
-        if self.chr: self.chr.close()
-        self.fasta_handle.close()
-
-    def __del__(self):
-        self.close()
+        c = self._chrs[i]
+        self.chr[i] = FastaGz(self.gz, c['length'], c['offset'])
+        return self.chr[i]
 
     @classmethod
-    def _load_index(self, fasta):
+    def _load_index(self, path):
         """ """
-        gdx = open(fasta + '.gdx', 'rb')
-        return cPickle.load(gdx)
+        gdx = open(path, 'rb')
+        try:
+            return cPickle.load(gdx)
+        finally:
+            gdx.close()
 
-    def sequence(self, f, auto_rc=True
-            , exon_keys=None, getter=operator.itemgetter):
+    def sequence(self, f, asstring=True, auto_rc=True
+            , exon_keys=None):
         """
         take a feature and use the start/stop or exon_keys to return
         the sequence from the assocatied fasta file:
         f: a feature
+        asstring: if true, return the sequence as a string
+                : if false, return as a numpy array
         auto_rc : if True and the strand of the feature == -1, return
                   the reverse complement of the sequence
 
+            >>> from pyfasta import Fasta
             >>> f = Fasta('tests/data/three_chrs.fasta')
             >>> f.sequence({'start':1, 'stop':2, 'strand':1, 'chr': 'chr1'})
             'AC'
-            >>> f.sequence({'start':1, 'stop':4, 'strand':1, 'chr': 'chr3'})
-            'ACGC'
-            >>> f['chr2'][-2:]
-            'AT'
+
+            >>> f.sequence({'start':1, 'stop':2, 'strand': -1, 'chr': 'chr1'})
+            'GT'
+
+            >>> f.index
+            {'chr3': (160, 3759), 'chr2': (80, 159), 'chr1': (0, 79)}
 
         NOTE: these 2 are reverse-complement-ary because of strand
-            >>> f.sequence({'start':10, 'stop':12, 'strand': -1, 'chr': 'chr1'})
+        #>>> f.sequence({'start':10, 'stop':12, 'strand': -1, 'chr': 'chr1'})
             'CAG'
             >>> f.sequence({'start':10, 'stop':12, 'strand': 1, 'chr': 'chr1'})
             'CTG'
+
+
+            >>> f.sequence({'start':10, 'stop':12, 'strand': -1, 'chr': 'chr3'})
+            'TGC'
+            >>> f.sequence({'start':10, 'stop':12, 'strand': 1, 'chr': 'chr3'})
+            'GCA'
+
+            >>> f['chr3'][:][-10:]
+            'CTACACGCAT'
+
         
         a feature can have exons:
             >>> feat = dict(start=9, stop=19, strand=1, chr='chr1'
@@ -191,11 +211,13 @@ class Fasta(dict):
             sequence = self._seq_from_keys(f, fasta, exon_keys)
 
         if sequence is None:
-            sequence = fasta[f['start'] -1: f['stop']]
+            sequence = fasta[(f['start'] - 1): f['stop']]
 
-        if auto_rc and f.get('strand') in ('-1', -1, '-'):
+        if auto_rc and f.get('strand') in (-1, '-1', '-'):
             sequence = complement(sequence)[::-1]
-        return sequence
+
+        if asstring: return sequence
+        return numpy.array(sequence, dtype='c')
 
     def _seq_from_keys(self, f, fasta, exon_keys, base='locations'):
         """Internal:
