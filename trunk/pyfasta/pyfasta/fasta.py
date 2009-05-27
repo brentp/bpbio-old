@@ -12,37 +12,36 @@ complement  = lambda s: s.translate(_complement)
 
 
 class FastaGz(gzip.GzipFile):
-    __slots__ = ('__len__', 'gz_name', 'length', '_offset', 'mode', 'seek', 'read')
+    __slots__ = ('gz_name', 'start', 'stop', 'mode', 'seek', 'read')
 
-    def __init__(self, gz_name, length, offset):
+    def __init__(self, gz_name, start, stop):
         self.gz_name = gz_name
-        self.length = length
-        self._offset    = offset
+        self.stop    = stop
+        self.start   = start
         gzip.GzipFile.__init__(self, gz_name, mode='rb')
 
     def __len__(self):
-        return self.length
+        return self.stop - self.start
 
     def __getitem__(self, islice):
 
         if isinstance(islice, int):
             if islice < 0:
-                self.seek(self._offset + self.length - islice)
-                return self.read(1)
+                self.seek(self.stop + islice)
             else:
-                self.seek(self._offset + islice)
-                return self.read(1)
+                self.seek(self.start + islice)
+            return self.read(1)
 
         if islice.start == 0 and islice.stop == sys.maxint:
-            self.seek(self._offset)
-            return self.read(self.length - 10)
+            self.seek(self.start)
+            return self.read(self.stop - self.start)
 
         #if islice.start > islice.stop:
             #    self.seek(self._offset + islice.stop)
             #l = islice.start - islice.stop
             #return complement(self.read(l))[::-1]
 
-        self.seek(self._offset + islice.start)
+        self.seek(self.start + islice.start)
         l = islice.stop - islice.start
         if islice.step in (1, None):
             return self.read(l)
@@ -61,9 +60,7 @@ class Fasta(dict):
         self.gz = fasta_name + ".gz"
         self.index = self.gzify()
 
-        self._chrs = {}
         self.chr = {}
-        self._load_mmap()
 
     @classmethod
     def is_up_to_date(klass, a, b):
@@ -100,7 +97,7 @@ class Fasta(dict):
             out.flush()
             p1 = out.tell()
             idx[header[1:].strip()] = (pos, p1)
-            pos = p1 + 1
+            pos = p1 
 
             snewline = mm.find('\n', sheader)
 
@@ -109,10 +106,6 @@ class Fasta(dict):
         p.close(); fh.close(); out.close()
         return idx
 
-    def _load_mmap(self):
-        for name, (start, stop) in self.index.iteritems():
-            # lazy, so the memmap isnt loaded until it's requested.
-            self._chrs[name] = {'offset': start, 'length': stop - start - 1 }
 
     def iterkeys():
         for k in self.keys(): yield k
@@ -128,8 +121,8 @@ class Fasta(dict):
         if i in self.chr:
             return self.chr[i]
 
-        c = self._chrs[i]
-        self.chr[i] = FastaGz(self.gz, c['length'], c['offset'])
+        c = self.index[i]
+        self.chr[i] = FastaGz(self.gz, c[0], c[1])
         return self.chr[i]
 
     @classmethod
@@ -161,7 +154,7 @@ class Fasta(dict):
             'GT'
 
             >>> f.index
-            {'chr3': (160, 3759), 'chr2': (80, 159), 'chr1': (0, 79)}
+            {'chr3': (160, 3760), 'chr2': (80, 160), 'chr1': (0, 80)}
 
         NOTE: these 2 are reverse-complement-ary because of strand
         #>>> f.sequence({'start':10, 'stop':12, 'strand': -1, 'chr': 'chr1'})
@@ -176,7 +169,7 @@ class Fasta(dict):
             'GCA'
 
             >>> f['chr3'][:][-10:]
-            'CTACACGCAT'
+            'CGCACGCTAC'
 
         
         a feature can have exons:
