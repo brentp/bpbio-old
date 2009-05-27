@@ -53,6 +53,10 @@ class FastaGz(gzip.GzipFile):
     def __str__(self):
         return self[:]
 
+    def __repr__(self):
+        return "%s('%s', %i..%i)" % (self.__class__.__name__, self.gz_name,
+                                   self.start, self.stop)
+
 class Fasta(dict):
     def __init__(self, fasta_name):
         self.fasta_name = fasta_name
