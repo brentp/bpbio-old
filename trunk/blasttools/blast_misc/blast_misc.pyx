@@ -199,7 +199,7 @@ def order_from_blast_list(*args):
     not yet implemented """
     cdef int qlen = 8, slen = 8, hlen, nmiss, ngap, qstart, qstop, sstart, sstop, icol = 0
     cdef float pct = 0.0, evalue = 0.0, bit = 0.0
-    cdef char qname[128], sname[128]
+    cdef char qname[164], sname[164]
     cdef FILE *fh
     for f in args:
         fh = fopen(f, "r")
