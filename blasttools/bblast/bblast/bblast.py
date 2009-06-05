@@ -191,32 +191,36 @@ def handle_temps(args):
         out = open(out_name, 'wb')
         header = None
         seq = ""
-        for line in fh:
+        try:
+            for line in fh:
+                if header is None:
+                    if line[1:].strip() != seqid: continue
+                    header = line[1:].strip()
+                    print >>out, '>%s' % header
+                    continue
+                elif line[0] == '>': break
+                if start is None:
+                    print >>out, line,
+                elif len(seq) <= (stop - start):
+                    # just hold the entire thing in memory and
+                    # snip it at the end.
+                    seq += line.rstrip()
             if header is None:
-                if line[1:].strip() != seqid: continue
-                header = line[1:].strip()
-                print >>out, '>%s' % header
-                continue
-            elif line[0] == '>': break
-            if start is None:
-                print >>out, line,
-            elif len(seq) <= (stop - start):
-                # just hold the entire thing in memory and
-                # snip it at the end.
-                seq += line.rstrip()
-        if header is None:
+                out.close()
+                try:
+                    os.unlink(out_name)
+                except: pass
+                raise Exception("no fasta with name %s containing seq %s"
+                                % (fa, seqid))
+            if start is not None:
+                print >>out, seq[max(0, start - 1):stop]
+            fh.close()
             out.close()
-            try:
+            return out_name
+        except:
+            if os.path.exists(out_name):
                 os.unlink(out_name)
-            except: pass
-            raise Exception("no fasta with name %s containing seq %s"
-                            % (fa, seqid))
-        if start is not None:
-            print >>out, seq[max(0, start - 1):stop]
-        fh.close()
-        out.close()
-        return out_name
-
+            raise
 
     args['i'] = _h(args['i'])
     args['d'] = _h(args['d'])

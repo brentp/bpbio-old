@@ -1,6 +1,7 @@
 #from blast_line import BlastLine as PyBlastLine
 from cblastline import BlastLine
 from gff_reader import GFFNode, GFFLine
+from blasttree import blast_to_tree, BlastTree
 
 
 def main():

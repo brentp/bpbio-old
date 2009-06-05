@@ -1,5 +1,3 @@
-import mmap
-import re
 import sys
 
 import logging
@@ -71,8 +69,10 @@ class GFFNode(object):
 
         next_gene_line = _get_non_comment_line(fh)
         while next_gene_line:
+            if "rname=" in next_gene_line and not "ID=" in next_gene_line:
+                next_gene_line = next_gene_line.replace("rname=", "ID=")
             assert "ID=" in next_gene_line,\
-                    ("should have an id to be a parent feature",)
+                    ("should have an id to be a parent feature", next_gene_line)
 
             parent = GFFLine(next_gene_line)
             block = _get_lines_until_next(fh, [parent.attribs["ID"]])
@@ -105,7 +105,7 @@ class GFFLine(object):
                 if not pair: continue
                 pair = pair.split('=')
                 attrs[pair[0]] = pair[1]
-        if attrs == {}: attrs["ID"] = line[8]
+        if attrs == {}: attrs["ID"] = sattrs.rstrip("\r\n; ")
         return attrs
 
     @classmethod
