@@ -86,16 +86,19 @@ class GFFNode(object):
 
 
 class GFFLine(object):
-    __slots__ = ('seqid', 'com', 'type', 'start', 'stop', 'end', 'strand',
-                    'attrs', 'attribs')
+    __slots__ = ('seqid', 'com', 'type', 'start', 'stop', 'end', 'strand', 'other',
+                    'attrs', 'attribs', 'sattrs', 'orig')
     def __init__(self, sline):
-        line = sline.split("\t")
+        line = sline.rstrip().split("\t")
         self.seqid = line[0]
         self.com  = line[1]
         self.type = line[2]
         self.start = int(line[3])
         self.stop = self.end = int(line[4])
+        self.orig = line[5]
         self.strand = line[6] in ('-', '-1') and -1 or 1
+        self.other = line[7]
+        self.sattrs = line[8]
         self.attrs = self.attribs = self._parse_attrs(line[8])
     
     def _parse_attrs(self, sattrs):
@@ -125,7 +128,11 @@ class GFFLine(object):
         return "GFFLine(%s %s:%i .. %i)" % (self.seqid,
                           self.attrs.get("ID", ""), self.start, self.end)
 
-
+    def to_line(self):
+        s =  [getattr(self, s) for s in ('seqid', 'com', 'type', 'start', 'end', 'orig', 'strand',
+                    'other', 'sattrs')]
+        s[6] = s[6] in ('+', 1, '1') and '+' or '-'
+        return "\t".join(map(str, s))
 
 class GFFDict(dict):
     def __init__(self, gff_path):

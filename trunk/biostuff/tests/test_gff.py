@@ -3,6 +3,14 @@ import sys
 
 GFF = "tests/data/th.gff" 
 
+def test_gff_line_to_string():
+    l = [ll for ll in open(GFF) if ll[0] != '#'][0]
+    g = GFFLine(l)
+
+    ga = str(g.to_line())[:30]
+    gb = l[:30]
+    assert ga == gb
+
 def test_gff_node():
 
     node_gen = GFFNode.yield_nodes(GFF)
