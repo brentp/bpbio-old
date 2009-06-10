@@ -5,69 +5,58 @@ my need to add more top-level features to sortable_type()
 """
 import sys
 import re
+from biostuff import GFFLine
 
 files = sys.argv[1:]
 
-lines = []
+lines = {}
 
-def sortable_type(ft):
-    if ft == 'gene' or ft == 'pseudogene' or ft == 'MIR': return 0
-    if ft == 'mRNA': return 1
-    if ft == 'exon':  return 3
-    if ft == 'CDS':  return 4
-    return 2
+def sort_feats(a, b):
+    if a.type in ('gene', 'pseudogene', 'MIR'): return -2
+    if b.type in ('gene', 'pseudogene', 'MIR'): return 2
+    if a.type == 'mRNA' and b.type in ('mRNA', 'exon', 'CDS'): return -1
+    if b.type == 'mRNA' and a.type in ('mRNA', 'exon', 'CDS'): return 1
+    return cmp(a.start, b.start)
 
-id_re = re.compile("ID=([^;]+)")
-def to_id(l):
-    try:
-        return re.search(id_re, l).groups(0)[0]
-    except:
-        #for lines that dont have ID
-        # return a unique thing.
-        return to_id.counter
-    finally:
-        to_id.counter += 1
-to_id.counter = 0
+def find_exts(flist):
+    fmin = min(f.start for f in flist)
+    fmax = max(f.end for f in flist)
+    return fmin, fmax
 
 for fi in files:
     if fi == "-": fi = sys.stdin
     else: fi = open(fi)
     for line in fi:
         if line[0] == '#': continue
-        sline = line.split("\t")
-        lines.append((sline[0], sortable_type(sline[2]), int(sline[3]), line))
+        o = GFFLine(line)
+        fid = o.attribs.get('Parent', o.attribs.get('rname', o.attribs.get('ID')))
+        # hack...
+        fid = fid.rstrip('.mRNA')
+        if fid is None:
+            raise Exception("No ID %s" % str(o))
+        if not o.seqid in lines:
+            lines[o.seqid] = {}
+        if not fid in lines[o.seqid]:
+            lines[o.seqid][fid] = []
+        lines[o.seqid][fid].append(o)
 
-lines.sort()
+def fcmp(a, b):
+    return cmp(min(f.start for f in a[1]), min(f.start for f in b[1]))
+
 print '##gff-version 3'
-last = lines[-1]
-for line in lines:
-    # since theyre sorted, can remove dups without an extra 
-    # dict.
-    sline = line[-1].split()
-    if sline == last: continue
 
-    # repeated start, stop, type, ID with something
-    # else different.
-    if sline[2:5] == last[2:5]:
-        if to_id(sline[-1]) == to_id(last[-1]):
-            # could also just give it a different id.
-            continue
+seen = {}
+for seqid, iddicts in sorted(lines.iteritems()):
+    for nameid, features in sorted(iddicts.items(), cmp=fcmp):
+        fmin, fmax = find_exts(features)
+        for f in features:
+            if f.type == 'gene':
+                if fmin < f.start: f.start = fmin
+                if fmax > f.end:   f.end   = fmax
 
-    print line[-1],
-    last = sline
-
-"""
-from __future__ import with_statement
-from tempfile import NamedTemporaryFile
-import gt
-with NamedTemporaryFile() as tf:
-    tf.write('##gff-version 3\n')
-    for line in lines:
-        tf.write(line[-1])
-    tf.flush()
-    ins = gt.GFF3InStream(tf.name)
-    outs = gt.GFF3OutStream(ins)
-    feature = outs.next_tree()
-    while feature:
-        feature = outs.next_tree()
-"""
+        for f in sorted(features, cmp=sort_feats):
+            key = (f.seqid, f.start, f.end, f.type)
+            if key in seen: continue
+            seen[key] = None
+            s = f.to_line()
+            print f.to_line()
