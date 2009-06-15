@@ -4,8 +4,12 @@ cdef extern from *:
 cdef extern from "stdio.h":
     int sscanf(char* astr, const_char_star format, ...)
 
+cdef extern from "Python.h":
+    char *PyString_AsString(object)
 
 cdef const_char_star blast_format = "%s\t%s\t%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%e\t%f"
+
+
 
 cdef class BlastLine:
     r"""
@@ -25,10 +29,26 @@ cdef class BlastLine:
     """
     cdef public int hitlen, nmismatch, ngaps, qstart, qstop, sstart, sstop
     cdef public float pctid, score, evalue
-    cdef public char query[48], subject[48]
+    cdef char _cquery[48], _csubject[48]
+    cdef object _pysubject, _pyquery
+
+    property query:
+        def __get__(self):
+            if self._pyquery is None:
+                return self._cquery
+            return self._pyquery
+        def __set__(self, val):
+            self._pyquery = val
+    property subject:
+        def __get__(self):
+            if self._pysubject is None:
+                return self._csubject
+            return self._pysubject
+        def __set__(self, val):
+            self._pysubject = val
 
     def __init__(self, char *sline):
-        sscanf(sline, blast_format, self.query, self.subject,
+        sscanf(sline, blast_format, self._cquery, self._csubject,
                 &self.pctid, &self.hitlen, &self.nmismatch, &self.ngaps,
                 &self.qstart, &self.qstop,
                 &self.sstart, &self.sstop,
@@ -40,8 +60,8 @@ cdef class BlastLine:
 
 
     def to_blast_line(self, as_str=True):
-        attrs = ('query', 'subject', 'pctid', 'hitlen', 'nmismatch', 'ngaps', \
-                 'qstart', 'qstop', 'sstart', 'sstop', 'evalue', 'score')
+        attrs = ['query', 'subject', 'pctid', 'hitlen', 'nmismatch', 'ngaps', \
+                 'qstart', 'qstop', 'sstart', 'sstop', 'evalue', 'score']
         if as_str:
             return "\t".join(map(str, [getattr(self, attr) for attr in attrs]))
         else:
