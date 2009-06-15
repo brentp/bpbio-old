@@ -22,6 +22,16 @@ def check_type(blasts, attrs, klass):
             assert isinstance(getattr(b, attr), klass)
 
 
+def test_query_subject_props():
+    f = "tests/data/tabd.blast" 
+    line = BlastLine(open(f).readline())
+    line.query = "asdf"
+    line.subject = "dddd"
+    assert line.query == "asdf"
+    assert line.subject == "dddd"
+    assert "asdf" in line.to_blast_line()
+    assert "dddd" in line.to_blast_line()
+
 def test_to_string():
     f = "tests/data/tabd.blast" 
     for line in open(f):
