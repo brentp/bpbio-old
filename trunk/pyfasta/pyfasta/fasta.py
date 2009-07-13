@@ -1,68 +1,72 @@
 import os
 import cPickle
-import numpy as np
 import string
-import gc
-import gzip
 import mmap
+import numpy as np
 import sys
 
 _complement = string.maketrans('ATCGatcgNnXx', 'TAGCtagcNnXx')
 complement  = lambda s: s.translate(_complement)
 
 
-class FastaGz(gzip.GzipFile):
-    __slots__ = ('gz_name', 'start', 'stop', 'mode', 'seek', 'read')
+class FastaRecord(object):
+    __slots__ = ('fh', 'start', 'stop')
 
-    def __init__(self, gz_name, start, stop):
-        self.gz_name = gz_name
+    def __init__(self, fh, start, stop):
+        self.fh      = fh
         self.stop    = stop
         self.start   = start
-        gzip.GzipFile.__init__(self, gz_name, mode='rb')
 
     def __len__(self):
         return self.stop - self.start
 
     def __getitem__(self, islice):
-
+        fh = self.fh
+        fh.seek(self.start)
         if isinstance(islice, int):
             if islice < 0:
-                self.seek(self.stop + islice)
+                fh.seek(self.stop + islice)
             else:
-                self.seek(self.start + islice)
-            return self.read(1)
+                fh.seek(self.start + islice)
+            return fh.read(1)
 
         if islice.start == 0 and islice.stop == sys.maxint:
-            self.seek(self.start)
-            return self.read(self.stop - self.start)
+            return fh.read(self.stop - self.start)
 
-        #if islice.start > islice.stop:
-            #    self.seek(self._offset + islice.stop)
-            #l = islice.start - islice.stop
-            #return complement(self.read(l))[::-1]
+        if not islice.start is None and islice.start < 0:
+            istart = self.stop + islice.start
+        else:
+            istart = self.start + (0 if islice.start is None else islice.start)
 
-        self.seek(self.start + islice.start)
-        l = islice.stop - islice.start
+            
+
+        if not islice.stop is None and islice.stop < 0:
+            istop = self.stop + islice.stop
+        else:
+            istop = self.stop if islice.stop is None else (self.start + islice.stop)
+
+        fh.seek(istart)
+
+        l = istop - istart
+
         if islice.step in (1, None):
-            return self.read(l)
+            return fh.read(l)
 
-        #elif islice.step == -1:
-            #seq = self.read(l)
-            #return complement(seq)[::-1]
 
     def __str__(self):
         return self[:]
 
     def __repr__(self):
-        return "%s('%s', %i..%i)" % (self.__class__.__name__, self.gz_name,
+        return "%s('%s', %i..%i)" % (self.__class__.__name__, self.fh.name,
                                    self.start, self.stop)
 
 class Fasta(dict):
     def __init__(self, fasta_name):
         self.fasta_name = fasta_name
         self.gdx = fasta_name + ".gdx"
-        self.gz = fasta_name + ".gz"
-        self.index = self.gzify()
+        self.flat = fasta_name + ".flat"
+        self.index = self.flatten()
+        self.fh = open(self.flat, 'rb')
 
         self.chr = {}
 
@@ -71,15 +75,15 @@ class Fasta(dict):
         return os.path.exists(a) and os.stat(a).st_mtime > os.stat(b).st_mtime
 
 
-    def gzify(self):
+    def flatten(self):
         """remove all newlines from the sequence in a fasta file"""
 
         if Fasta.is_up_to_date(self.gdx, self.fasta_name) \
-                     and Fasta.is_up_to_date(self.gz, self.fasta_name):
+                     and Fasta.is_up_to_date(self.flat, self.fasta_name):
             return Fasta._load_index(self.gdx)
 
 
-        out = gzip.open(self.gz, 'wb')
+        out = open(self.flat, 'wb')
 
         fh = open(self.fasta_name, 'r+')
         mm = mmap.mmap(fh.fileno(), os.path.getsize(self.fasta_name))
@@ -111,7 +115,7 @@ class Fasta(dict):
         return idx
 
 
-    def iterkeys():
+    def iterkeys(self):
         for k in self.keys(): yield k
     def keys(self):
         return self.index.keys()
@@ -126,7 +130,7 @@ class Fasta(dict):
             return self.chr[i]
 
         c = self.index[i]
-        self.chr[i] = FastaGz(self.gz, c[0], c[1])
+        self.chr[i] = FastaRecord(self.fh, c[0], c[1])
         return self.chr[i]
 
     @classmethod
@@ -214,7 +218,7 @@ class Fasta(dict):
             sequence = complement(sequence)[::-1]
 
         if asstring: return sequence
-        return numpy.array(sequence, dtype='c')
+        return np.array(sequence, dtype='c')
 
     def _seq_from_keys(self, f, fasta, exon_keys, base='locations'):
         """Internal:

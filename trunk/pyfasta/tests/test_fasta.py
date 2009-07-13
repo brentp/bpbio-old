@@ -25,6 +25,9 @@ class FastaTest(unittest.TestCase):
     def test_shape(self):
         self.assertEqual(len(self.f['chr2']), 80)
         self.assertEqual(len(self.f['chr3']), 3600)
+        self.assertEqual(self.f['chr2'][:2], 'TA')
+
+        self.assertEqual(self.f['chr3'][:5], 'ACGCA')
 
     def test_tostring(self):
         s = 'TAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAT'
@@ -33,17 +36,20 @@ class FastaTest(unittest.TestCase):
 
     def test_slice(self):
         f = self.f
-        self.assertEqual(str(f['chr3'][:5]), 'ACGCA')
+        self.assertEqual(str(f['chr3'][:4]), 'ACGC')
 
     
         seq = 'TACGCACGCTAC'
         self.assertEqual(seq, f['chr3'][-12:])
 
+        self.assertEqual(seq[:4], f['chr3'][-12:-8])
+
         self.assertEqual(f['chr3'][0:5][::-1], 'ACGCA')
+        self.assertEqual(f['chr3'][0:5], 'ACGCA')
 
     def tearDown(self):
         import os
-        os.unlink('tests/data/three_chrs.fasta.gz')
+        os.unlink('tests/data/three_chrs.fasta.flat')
         os.unlink('tests/data/three_chrs.fasta.gdx')
 
 
