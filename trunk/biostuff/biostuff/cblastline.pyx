@@ -29,7 +29,7 @@ cdef class BlastLine:
     """
     cdef public int hitlen, nmismatch, ngaps, qstart, qstop, sstart, sstop
     cdef public float pctid, score, evalue
-    cdef char _cquery[48], _csubject[48]
+    cdef char _cquery[128], _csubject[128]
     cdef object _pysubject, _pyquery
 
     property query:
@@ -39,6 +39,7 @@ cdef class BlastLine:
             return self._pyquery
         def __set__(self, val):
             self._pyquery = val
+
     property subject:
         def __get__(self):
             if self._pysubject is None:
@@ -54,16 +55,32 @@ cdef class BlastLine:
                 &self.sstart, &self.sstop,
                 &self.evalue, &self.score)
 
+    def __richcmp__(BlastLine self, BlastLine other, size_t op):
+        if op == 2: # ==
+            if self.query != other.query and self.qstart != other.qstart: return False
+            return self.subject == other.subject and self.qstop == other.qstop and \
+                    self.sstop == other.sstop and self.evalue == other.evalue and \
+                    self.hitlen == other.hitlen
+        elif op == 3: # !=
+            return not self.__richcmp__(other, 2)
+        else:
+            raise Exception("that comparison not implemented")
+
+
     def __repr__(self):
-        return "BlastLine('%s'-'%s', ptcid=%.3f, eval=%.3f, score=%.1f)" \
-            % (self.query, self.subject, self.pctid, self.evalue, self.score)
+        return "BlastLine('%s'[%i]-'%s'[%i], ptcid=%.3f, eval=%.3f, score=%.1f)" \
+            % (self.query, self.qstart, self.subject, self.sstart, self.pctid, \
+               self.evalue, self.score)
 
 
     def to_blast_line(self, as_str=True):
         attrs = ['query', 'subject', 'pctid', 'hitlen', 'nmismatch', 'ngaps', \
                  'qstart', 'qstop', 'sstart', 'sstop', 'evalue', 'score']
         if as_str:
-            return "\t".join(map(str, [getattr(self, attr) for attr in attrs]))
+            s = [getattr(self, attr) for attr in attrs]
+            s[2] = "%.2f" % (s[2], ) # pctid
+            s[-1] = "%.1f" % (s[-1], ) # bitscore
+            return "\t".join(map(str, s))
         else:
             return [getattr(self, attr) for attr in attrs]
 
