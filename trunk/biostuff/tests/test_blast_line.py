@@ -41,3 +41,19 @@ def test_to_string():
         # works better than string comparison because of floats.
         for attr in some_attrs:
             assert getattr(a, attr) == getattr(b, attr), (a, b, attr)
+
+def test_pickle():
+    import cPickle
+    f = "tests/data/tabd.blast" 
+    line = BlastLine(open(f).readline())
+    
+    d = cPickle.dumps(line, -1)
+
+    loaded = cPickle.loads(d)
+
+    for k in BlastLine.attrs:
+        assert getattr(loaded, k) == getattr(line, k)
+    loaded.query = "asdf"
+
+    assert loaded.query != line.query
+
