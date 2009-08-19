@@ -90,10 +90,13 @@ cdef class BlastLine:
 
 
     def __reduce__(self):
-        return create_blast_line, self.__getstate__()
+        return create_blast_line, (
+            self.query, self.subject, self.pctid, self.hitlen, self.nmismatch,
+            self.ngaps, self.qstart, self.qstop, self.sstart, self.sstop, 
+            self.evalue, self.score)
 
-    def __getstate__(self):
-        return tuple([getattr(self, k) for k in BlastLine.attrs])
+    #def __getstate__(self):
+        #    return tuple([getattr(self, k) for k in BlastLine.attrs])
 
 
 cdef extern from "pnew.h":
