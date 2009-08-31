@@ -4,7 +4,7 @@ from matplotlib.figure import Figure
 from cStringIO import StringIO
 
 class Gene(FancyArrow):
-    def __init__(self, text, start, stop, strand, width=0.05, **kwargs):
+    def __init__(self, text, start, stop, strand, width=0.07, ec='none', **kwargs):
         assert start < stop
         self.text = text
 
@@ -21,10 +21,12 @@ class Gene(FancyArrow):
         # move it down a bit since text goes above.
         y -= 0.05
 
-        head_length = min(10, max(20, (stop - start)/ 4))
+        head_length = (stop - start)/ 4
+        #if head_length > 200: head_length = 200
+        if head_length < 10: head_length = max(10, stop - start)
         self._textx = start
         self._texty = y + (1.8 * width) + .16
-        FancyArrow.__init__(self, x, y, dx, dy, head_length=head_length, width=width, length_includes_head=True, **kwargs)
+        FancyArrow.__init__(self, x, y, dx, dy, head_length=head_length, width=width, length_includes_head=True, ec='none', **kwargs)
 
 
 
@@ -56,7 +58,8 @@ class SimpleFigure(Figure):
     def add_patch(self, patch):
         self.ax.add_patch(patch)
         if hasattr(patch, 'text'):
-            self.ax.text(patch._textx, patch._texty, patch.text, va='top', ha='left', fontsize=10)
+            if not patch.text is None:
+                self.ax.text(patch._textx, patch._texty, patch.text, va='top', ha='left', fontsize=8.5)
 
     def save(self, filename=None):
 
@@ -74,7 +77,7 @@ class SimpleFigure(Figure):
 
 
 class GeneFigure(SimpleFigure):
-    def __init__(self, figsize=(512, 96), dpi=96):
+    def __init__(self, figsize=(768, 96), dpi=96):
         SimpleFigure.__init__(self, figsize, dpi)
         self.ax.set_ylim(-0.5, 0.5)
 
