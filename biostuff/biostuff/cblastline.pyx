@@ -9,6 +9,16 @@ cdef extern from "Python.h":
 
 
 cdef const_char_star blast_format = "%s\t%s\t%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%e\t%f"
+cdef const_char_star blast_format_line = "%s\t%s\t%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%e\t%f\n"
+
+cdef extern from "stdio.h":
+    ctypedef struct FILE:
+        pass
+    FILE * fopen(char *, char *)
+    int fscanf(FILE * i, char * fmt, ...)
+    cdef int fclose(FILE *)
+    cdef Py_ssize_t strlen(char *)
+    int EOF
 
 
 
@@ -78,7 +88,18 @@ cdef class BlastLine:
             % (self.query, self.qstart, self.subject, self.sstart, self.pctid, \
                self.evalue, self.score)
 
-
+    """
+    @classmethod
+    def yield_lines(cls, filename):
+        cdef float pct = 0.0, evalue = 0.0, bit = 0.0
+        cdef char qname[512], sname[512]
+        cdef char *tmp
+        cdef FILE *fh
+        fh = fopen(filename, "r")
+        while fscanf(fh, blast_format_line, qname, sname, &pct, &hlen, &nmiss, &ngap, &qstart, &qstop, &sstart, &sstop, &evalue, &bit ) != EOF:
+            yield create_blast_line(qname, sname, ptc, hlen, nmiss, ngap,
+                                    qstart, qstop, sstart, sstop, evalue, bit)
+    """
     def to_blast_line(self, as_str=True):
         if as_str:
             s = [getattr(self, attr) for attr in BlastLine.attrs]

@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 from distutils.extension import Extension
-from Cython.Distutils import build_ext
+#from Cython.Distutils import build_ext
 
 version = '0.0'
 
