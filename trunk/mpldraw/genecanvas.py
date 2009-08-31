@@ -1,6 +1,7 @@
 from matplotlib.patches import FancyArrow
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
+from cStringIO import StringIO
 
 class Gene(FancyArrow):
     def __init__(self, text, start, stop, strand, width=0.05, **kwargs):
@@ -57,10 +58,18 @@ class SimpleFigure(Figure):
         if hasattr(patch, 'text'):
             self.ax.text(patch._textx, patch._texty, patch.text, va='top', ha='left', fontsize=10)
 
-    def save(self, filename):
+    def save(self, filename=None):
+
         for xt in self.ax.get_xticklabels():
             xt.set_fontsize(8)
-        self.canvas.print_figure(filename, dpi=self.dpi)
+        if filename is None:
+            s = StringIO()
+            self.canvas.print_figure(s, dpi=self.dpi)
+            s.seek(0)
+            return s.getvalue()
+
+        else:
+            self.canvas.print_figure(filename, dpi=self.dpi)
     savefig = save
 
 
@@ -94,3 +103,6 @@ if __name__ == "__main__":
 
     gf.set_xlim(0, 1600)
     gf.save('t.png')
+ 
+    # the buffer
+    print len(gf.save())
