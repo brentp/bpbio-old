@@ -1,28 +1,26 @@
-from matplotlib.patches import FancyArrow
+from matplotlib.patches import FancyArrow, Rectangle
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 from cStringIO import StringIO
-from matplotlib.ticker import Formatter
+from matplotlib.ticker import Formatter, LinearLocator
 
-class BasePairFormatter(Formatter):
+class BasePairTickFormatter(Formatter):
     def __call__(self, x, pos=None):
         fmts = ((1e9, 'G'), (1e6, 'M'), (1e3, 'K'))
         for div, fmt in fmts:
-            if x * 5 > div:
-                x = "%.2f" % (float(x) / div)
+            if x * 2 > div:
+                x = "%.3f" % (float(x) / div)
                 x = x.rstrip('0').rstrip('.') + fmt
                 break
         else:
             x = str(int(x))
         return x
 
+class BasePairLocator(LinearLocator):
+    pass
+    
 
-class Gene(FancyArrow):
-    def __init__(self, text, start, stop, strand, width=0.07, ec='none', **kwargs):
-        assert start < stop
-        self.text = text
-
-        dy = 0
+def xy_dxy(start, stop, strand):
         if strand in ('-1', '-', -1):
             x = stop
             dx = start - stop
@@ -30,19 +28,56 @@ class Gene(FancyArrow):
         else:
             x = start
             dx = stop - start
-            y = 0.22
+            y = 0.22 if strand else 0.0
+        return x, y, dx
 
+class Gene(FancyArrow):
+    def __init__(self, text, start, stop, strand=None, width=0.07, ec='none', **kwargs):
+        assert start < stop
+        self.text = text
+
+        x, y, dx = xy_dxy(start, stop, strand)
         # move it down a bit since text goes above.
         y -= 0.05
+        head_length = self.get_head_length(start, stop, strand, kwargs)
+
+        self._textx = start
+        self._texty = y + (0.5 * width) + .16
+        if not ec in ('none', None) and not kwargs.get('fc'):
+            kwargs['fc'] = ec
+        FancyArrow.__init__(self, x, y, dx, 0, head_length=head_length, width=width, length_includes_head=True, ec=ec, **kwargs)
+
+    def get_head_length(self, start, stop, strand, kwargs):
+        if 'head_length' in kwargs:
+            return float(kwargs['head_length'])
+        if not strand:
+            return 0
 
         head_length = (stop - start)/ 4
         #if head_length > 200: head_length = 200
         if head_length < 10: head_length = max(10, stop - start)
+        return head_length
+
+class Block(Rectangle):
+    def __init__(self, text, start, stop, strand=None, width=0.3, ec='none', **kwargs):
+        x, y, dx = xy_dxy(start, stop, strand)
         self._textx = start
-        self._texty = y + (1.8 * width) + .16
-        FancyArrow.__init__(self, x, y, dx, dy, head_length=head_length, width=width, length_includes_head=True, ec='none', **kwargs)
+        self._texty = y + width / 2.0 + 0.16
+        self.text = text
+        w = width
+        y -= 0.05
+        if not ec in ('none', None) and not kwargs.get('fc'):
+            kwargs['fc'] = ec
+        Rectangle.__init__(self, (x, y - w / 2.0), width=dx, height=w, ec=ec, **kwargs)
 
+class CDS(Block):
+    def __init__(self, start, stop, strand=None, **kwargs):
+        fc = kwargs.get('fc', 'red')
+        kwargs['fc'] = fc
+        kwargs['width'] = kwargs.get('width', 0.09)
+        kwargs['ec'] = 'black'
 
+        Block.__init__(self, None, start, stop, strand, **kwargs)
 
 
 class SimpleFigure(Figure):
@@ -94,7 +129,9 @@ class GeneFigure(SimpleFigure):
     def __init__(self, figsize=(768, 96), dpi=96):
         SimpleFigure.__init__(self, figsize, dpi)
         self.ax.set_ylim(-0.5, 0.5)
-        self.ax.xaxis.set_major_formatter(BasePairFormatter())
+        self.ax.xaxis.set_major_formatter(BasePairTickFormatter())
+        #self.ax.xaxis.set_major_locator(BasePairLocator())
+        #self.ax.grid()
 
     def set_xlim(self, xmin, xmax):
         self.ax.set_xlim(xmin, xmax)
@@ -112,12 +149,18 @@ if __name__ == "__main__":
     g2 = Gene("G@", 10, 130, -1)
     gf.add_patch(g2)
 
+    cds = CDS(60, 90, -1)
+    gf.add_patch(cds)
+
 
     g3 = Gene("At2g25640", 140, 290, -1)
     gf.add_patch(g3)
 
     g4 = Gene("At2g25640", 1400, 1590, 1)
     gf.add_patch(g4)
+
+    nostrand = Block("someblock", 1000, 1200, fc='red', ec='black')
+    gf.add_patch(nostrand)
 
     gf.set_xlim(0, 1600)
     gf.save('t.png')
