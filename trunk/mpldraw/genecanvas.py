@@ -2,6 +2,20 @@ from matplotlib.patches import FancyArrow
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 from cStringIO import StringIO
+from matplotlib.ticker import Formatter
+
+class BasePairFormatter(Formatter):
+    def __call__(self, x, pos=None):
+        fmts = ((1e9, 'G'), (1e6, 'M'), (1e3, 'K'))
+        for div, fmt in fmts:
+            if x * 5 > div:
+                x = "%.2f" % (float(x) / div)
+                x = x.rstrip('0').rstrip('.') + fmt
+                break
+        else:
+            x = str(int(x))
+        return x
+
 
 class Gene(FancyArrow):
     def __init__(self, text, start, stop, strand, width=0.07, ec='none', **kwargs):
@@ -80,6 +94,7 @@ class GeneFigure(SimpleFigure):
     def __init__(self, figsize=(768, 96), dpi=96):
         SimpleFigure.__init__(self, figsize, dpi)
         self.ax.set_ylim(-0.5, 0.5)
+        self.ax.xaxis.set_major_formatter(BasePairFormatter())
 
     def set_xlim(self, xmin, xmax):
         self.ax.set_xlim(xmin, xmax)
