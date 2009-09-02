@@ -33,7 +33,7 @@ def xy_dxy(start, stop, strand):
 
 class Gene(FancyArrow):
     def __init__(self, text, start, stop, strand=None, width=0.07, ec='none', **kwargs):
-        assert start < stop
+        assert start <= stop
         self.text = text
 
         x, y, dx = xy_dxy(start, stop, strand)
@@ -45,7 +45,7 @@ class Gene(FancyArrow):
         self._texty = y + (0.5 * width) + .16
         if not ec in ('none', None) and not kwargs.get('fc'):
             kwargs['fc'] = ec
-        FancyArrow.__init__(self, x, y, dx, 0, head_length=head_length, width=width, length_includes_head=True, ec=ec, **kwargs)
+        FancyArrow.__init__(self, x, y, dx, 0, head_width=width * 1.35, head_length=head_length, width=width, length_includes_head=True, ec=ec, **kwargs)
 
     def get_head_length(self, start, stop, strand, kwargs):
         if 'head_length' in kwargs:
@@ -53,7 +53,7 @@ class Gene(FancyArrow):
         if not strand:
             return 0
 
-        head_length = (stop - start)/ 4
+        head_length = (stop - start)/ 6.
         #if head_length > 200: head_length = 200
         if head_length < 10: head_length = max(10, stop - start)
         return head_length
@@ -61,8 +61,8 @@ class Gene(FancyArrow):
 class Block(Rectangle):
     def __init__(self, text, start, stop, strand=None, width=0.3, ec='none', **kwargs):
         x, y, dx = xy_dxy(start, stop, strand)
-        self._textx = start
-        self._texty = y + width / 2.0 + 0.16
+        self._textx = start + abs(dx)/ 20.
+        self._texty = y 
         self.text = text
         w = width
         y -= 0.05
