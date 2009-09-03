@@ -55,7 +55,7 @@ def is_protein_db(blast_cfg):
     return blast_cfg["p"] in ("blastx", "blastp")
    
 
-def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False, blast_log='blast.log'):
+def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False, blast_log=None):
     blast_cfg = _blast_cfg.copy()
     check_args(blast_cfg)
     q_fasta = blast_cfg["i"]
@@ -92,6 +92,8 @@ def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False, blast_log='
                   + ".blast"
         blast_file = get_blast_file(q_fasta, s_fasta, to_query_dir)
 
+    if blast_log is None:
+        blast_log = blast_file + ".log"
     blast_cfg.update({"o": blast_file})
     params = add_dash(blast_cfg)
 
