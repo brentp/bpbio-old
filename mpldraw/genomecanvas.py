@@ -3,6 +3,8 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 from cStringIO import StringIO
 from matplotlib.ticker import Formatter, LinearLocator
+from mpl_toolkits.axes_grid import axes_size as Size
+from mpl_toolkits.axes_grid import Divider
 
 BOTTOM_AXIS, MIDDLE_AXIS, TOP_AXIS = range(3)
 
@@ -39,7 +41,7 @@ class Gene(FancyArrow):
         head_length = self.get_head_length(start, stop, strand, kwargs)
 
         self._textx = start
-        self._texty = y + (2 * width) + .03
+        self._texty = y + (1.01 * width) + .05
         if not ec in ('none', None) and not kwargs.get('fc'):
             kwargs['fc'] = ec
         FancyArrow.__init__(self, x, y, dx, 0, head_width=width * 1.35, head_length=head_length, width=width, length_includes_head=True, ec=ec, **kwargs)
@@ -56,12 +58,12 @@ class Gene(FancyArrow):
         return head_length
 
 class Block(Rectangle):
-    def __init__(self, text, start, stop, strand=None, width=0.5, ec='none', y=None, **kwargs):
+    def __init__(self, text, start, stop, strand=None, width=0.25, ec='none', y=None, **kwargs):
         x, _, dx = xy_dxy(start, stop, strand)
         if y is None:
-            y = 0.5
+            y = 0.25
         self._textx = start + abs(dx)/ 20.
-        self._texty = y 
+        self._texty = y
         self.text = text
         w = width
         if not ec in ('none', None) and not kwargs.get('fc'):
@@ -70,7 +72,9 @@ class Block(Rectangle):
 
 class HSP(Block):
     def __init__(self, start, stop, strand=None, width=0.18, fc='#cacaca', ec='#777777', **kwargs):
-        Block.__init__(self, None, start, stop, strand, width=width, fc=fc, ec=ec, *kwargs)
+        if not 'y' in kwargs: kwargs['y'] = 0.5
+        Block.__init__(self, None, start, stop, strand, width=width, fc=fc, ec=ec, **kwargs)
+
     
 
 class CDS(Block):
@@ -94,12 +98,9 @@ class ThreeAxFigure(Figure):
         self.setup_axes()
 
     def setup_axes(self):
-        from mpl_toolkits.axes_grid import axes_size as Size
-        from mpl_toolkits.axes_grid import Divider
 
-        rect = (0, 0.05, 1, 1) 
+        rect = (0, 0.07, 1, 1) 
         axes = [self.add_axes(rect, autoscale_on=False, aspect='auto', alpha=1.0, label=str(i)) for i in range(3)]
-        
 
         hori = [Size.AxesX(axes[0])]
         vert = [Size.Scaled(0.20), Size.Scaled(0.60), Size.Scaled(0.20)]
@@ -109,30 +110,29 @@ class ThreeAxFigure(Figure):
         for i, ax in enumerate(axes):
             ax.set_axes_locator(d.new_locator(nx=0, ny=i))
 
-        self.ax = axes
         self._setup_axes()
 
 
     def _setup_axes(self):
         """ set the ranges and spines"""
 
-        for ax in self.ax:
+        for ax in self.axes:
             for loc, sp in ax.spines.iteritems():
                 if loc != 'bottom': sp.set_color('none')
-        self.ax[BOTTOM_AXIS].xaxis.set_major_formatter(BasePairTickFormatter())
+        self.axes[BOTTOM_AXIS].xaxis.set_major_formatter(BasePairTickFormatter())
 
-        for ax in self.ax:
+        for ax in self.axes:
             ax.set_yticks([])
             ax.patch.set_alpha(0.0)
 
         for ax in (MIDDLE_AXIS, TOP_AXIS):
-            self.ax[ax].set_xticks([])
+            self.axes[ax].set_xticks([])
 
-        for ax in (BOTTOM_AXIS, TOP_AXIS):
-            self.ax[ax].set_ylim(0, 1)
+        for ax in self.axes:
+            ax.set_ylim(0, 1)
 
     def set_xlim(self, xmin, xmax):
-        for ax in self.ax:
+        for ax in self.axes:
             ax.set_xlim(xmin, xmax)
 
 
@@ -140,12 +140,14 @@ class ThreeAxFigure(Figure):
         self.axes[axis].add_patch(patch)
         if hasattr(patch, 'text'):
             if not patch.text is None:
-                self.axes[axis].text(patch._textx, patch._texty, patch.text, va='top', ha='left', fontsize=8.5)
+                self.axes[axis].text(patch._textx, patch._texty, patch.text, va='center', ha='left', fontsize=8.5)
 
-    def save(self, filename=None, fontsize=8):
+    def save(self, filename=None, fontsize=8, autoscale=True):
 
         for xt in self.axes[BOTTOM_AXIS].get_xticklabels():
             xt.set_fontsize(fontsize)
+        if autoscale:
+            self.axes[MIDDLE_AXIS].axes.autoscale_view(scalex=False, scaley=True)
 
         if filename is None:
             s = StringIO()
@@ -182,13 +184,12 @@ if __name__ == "__main__":
     g4 = Gene("At2g25640", 1400, 1590, 1)
     gf.add_patch(g4, TOP_AXIS)
 
-    nostrand = Block("someblock", 1000, 1200, fc='red', ec='black', y=1200)
+    nostrand = Block("someblock", 1000, 1200, fc='red', ec='black', y=0.7)
     gf.add_patch(nostrand, MIDDLE_AXIS)
 
     gf.add_patch(HSP(1460, 1503), MIDDLE_AXIS)
-    print sorted(dir(gf.ax[MIDDLE_AXIS].yaxis))#.set_autoscale_on(True)
-    gf.ax[MIDDLE_AXIS].yaxis.set_scale('auto')
-    print gf.ax[MIDDLE_AXIS].get_ylim()
+    import numpy as np
+    gf.axes[1].plot(np.sin(np.linspace(0, 10, 1600)))
 
     gf.set_xlim(0, 1600)
     gf.save('/var/www/t/t.png')
@@ -196,3 +197,5 @@ if __name__ == "__main__":
  
     # the buffer
     print len(gf.save())
+    #gf.clear()
+
