@@ -54,7 +54,7 @@ class FastaTest(unittest.TestCase):
 
 
 import numpy as np
-class FastaTest(unittest.TestCase):
+class ArrayInterfaceTest(unittest.TestCase):
 
     def setUp(self):
         self.f = Fasta('tests/data/three_chrs.fasta')
