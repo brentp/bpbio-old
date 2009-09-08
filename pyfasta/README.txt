@@ -12,9 +12,10 @@ pyfasta
 Implementation
 ==============
 
-Requires Python >= 2.6. Stores a flattened version of the fasta file without 
+Requires Python >= 2.5. Stores a flattened version of the fasta file without 
 spaces or headers. And a pickle of the start, stop (for fseek) locations of 
 each header in the fasta file for internal use.
+Now supports the numpy array interface.
 
 
 Usage
