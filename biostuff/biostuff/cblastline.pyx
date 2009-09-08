@@ -8,8 +8,8 @@ cdef extern from "Python.h":
     char *PyString_AsString(object)
 
 
-cdef const_char_star blast_format = "%s\t%s\t%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%e\t%f"
-cdef const_char_star blast_format_line = "%s\t%s\t%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%e\t%f\n"
+cdef const_char_star blast_format = "%s\t%s\t%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lf\t%f"
+cdef const_char_star blast_format_line = "%s\t%s\t%f\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%lf\t%f\n"
 
 cdef extern from "stdio.h":
     ctypedef struct FILE:
@@ -41,7 +41,8 @@ cdef class BlastLine:
         
     """
     cdef public int hitlen, nmismatch, ngaps, qstart, qstop, sstart, sstop
-    cdef public float pctid, score, evalue
+    cdef public float pctid, score
+    cdef public double evalue
     cdef char _cquery[128], _csubject[128]
     cdef object _pysubject, _pyquery
     attrs = ('query', 'subject', 'pctid', 'hitlen', 'nmismatch', 'ngaps', \
