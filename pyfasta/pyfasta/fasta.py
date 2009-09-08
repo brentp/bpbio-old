@@ -63,7 +63,7 @@ class FastaRecord(object):
     @property
     def __array_interface__(self):
         return {
-            'shape': len(self),
+            'shape': (len(self), ),
             'typestr': '|S1',
             'version': 3,
             'data': buffer(self)
