@@ -53,5 +53,27 @@ class FastaTest(unittest.TestCase):
         os.unlink('tests/data/three_chrs.fasta.gdx')
 
 
+import numpy as np
+class FastaTest(unittest.TestCase):
+
+    def setUp(self):
+        self.f = Fasta('tests/data/three_chrs.fasta')
+
+    def test_len(self):
+        a = np.array(self.f['chr3'])
+        assert a.shape[0] == len(self.f['chr3'])
+
+
+    def test_copy(self):
+        # the array is definitely a copy...
+        a = np.array(self.f['chr3'])
+        old = self.f['chr3'][1:5]
+        a[1:5] = np.array('N', dtype='c')
+        c = self.f['chr3'][1:5]
+        assert c == old
+
+        assert a[1:5].tostring() == 'NNNN', a[1:5].tostring()
+
+
 if __name__ == "__main__":
     unittest.main()

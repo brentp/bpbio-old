@@ -60,6 +60,15 @@ class FastaRecord(object):
         return "%s('%s', %i..%i)" % (self.__class__.__name__, self.fh.name,
                                    self.start, self.stop)
 
+    @property
+    def __array_interface__(self):
+        return {
+            'shape': len(self),
+            'typestr': '|S1',
+            'version': 3,
+            'data': buffer(self)
+        }
+
 class Fasta(dict):
     def __init__(self, fasta_name):
         self.fasta_name = fasta_name
