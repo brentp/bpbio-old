@@ -22,7 +22,7 @@ Usage
 =====
 
 
-.. sourcecode:: python
+.. sourcecode:: python::
 
     >>> from pyfasta import Fasta
 
@@ -49,6 +49,18 @@ Usage
     # with reverse complement for - strand
     >>> f.sequence({'chr': 'chr1', 'start': 2, 'stop': 9, 'strand': '-'})
     'TCAGTCAG'
+
+
+
+    # FastaRecords support the numpy array interface.
+    >>> import numpy as np
+    >>> a = np.array(f['chr2'])
+    >>> a.shape[0] == len(f['chr2'])
+    True
+
+    >>> a[10:14]
+    array(['A', 'A', 'A', 'A'], 
+          dtype='|S1')
 
 
     # creates a .flat and a .gdx pickle of the fasta and the index.

@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 
-version = '0.2.3'
+version = '0.2.4'
 
 setup(name='pyfasta',
       version=version,
@@ -21,7 +21,7 @@ setup(name='pyfasta',
           # -*- Extra requirements: -*-
       ],
       scripts=[],
-      entry_points="""
-      # -*- Entry points: -*-
-      """,
+      entry_points={
+      'console_scripts': ['pyfasta = pyfasta:main']
+      },
       )
