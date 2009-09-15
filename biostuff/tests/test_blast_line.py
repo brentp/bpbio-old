@@ -7,6 +7,7 @@ def test_blastline():
     f = "tests/data/tabd.blast" 
     blasts = []
     for line in open(f):
+        b = BlastLine(line)
         blasts.append(BlastLine(line))
 
     yield check_type, blasts, ('qstart', 'qstop', 'sstart', 'sstop',
