@@ -1,8 +1,7 @@
-=======
-pyfasta
-=======
+==================================================
+pyfasta: pythonic access to fasta sequence files.
+==================================================
 
-:Description: pythonic access to fasta sequence files.
 
 :Author: Brent Pedersen (brentp)
 :Email: bpederse@gmail.com
@@ -21,8 +20,7 @@ Now supports the numpy array interface.
 Usage
 =====
 
-
-.. sourcecode:: python::
+::
 
     >>> from pyfasta import Fasta
 
@@ -32,6 +30,10 @@ Usage
 
     >>> f['chr1']
     FastaRecord('tests/data/three_chrs.fasta.flat', 0..80)
+
+Slicing
+-------
+::
 
     >>> f['chr1'][:10]
     'ACTGACTGAC'
@@ -56,6 +58,10 @@ Usage
     'TCAGTCAG'
 
 
+---------------------
+Numpy Array Interface
+---------------------
+::
 
     # FastaRecords support the numpy array interface.
     >>> import numpy as np
@@ -68,11 +74,7 @@ Usage
           dtype='|S1')
 
 
-    # creates a .flat and a .gdx pickle of the fasta and the index.
-    >>> import os
-    >>> sorted(os.listdir('tests/data/'))[1:]
-    ['three_chrs.fasta', 'three_chrs.fasta.flat', 'three_chrs.fasta.gdx']
-
     # cleanup (though for real use these will remain for faster access)
+    >>> import os
     >>> os.unlink('tests/data/three_chrs.fasta.gdx')
     >>> os.unlink('tests/data/three_chrs.fasta.flat')
