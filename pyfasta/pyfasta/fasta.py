@@ -13,6 +13,7 @@ class FastaRecord(object):
     __slots__ = ('fh', 'start', 'stop')
 
     def __init__(self, fh, start, stop):
+
         self.fh      = fh
         self.stop    = stop
         self.start   = start
@@ -31,7 +32,10 @@ class FastaRecord(object):
             return fh.read(1)
 
         if islice.start == 0 and islice.stop == sys.maxint:
-            return fh.read(self.stop - self.start)
+            if islice.step in (1, None):
+                return fh.read(self.stop - self.start)
+            return fh.read(self.stop - self.start)[::islice.step]
+
 
         if not islice.start is None and islice.start < 0:
             istart = self.stop + islice.start
@@ -52,6 +56,8 @@ class FastaRecord(object):
         if islice.step in (1, None):
             return fh.read(l)
 
+        return fh.read(l)[::islice.step]
+
 
     def __str__(self):
         return self[:]
@@ -71,6 +77,26 @@ class FastaRecord(object):
 
 class Fasta(dict):
     def __init__(self, fasta_name):
+        """
+            >>> from pyfasta import Fasta
+
+            >>> f = Fasta('tests/data/three_chrs.fasta')
+            >>> sorted(f.keys())
+            ['chr1', 'chr2', 'chr3']
+
+        slicing returns an object.
+            >>> f['chr1']
+            FastaRecord('tests/data/three_chrs.fasta.flat', 0..80)
+
+        extract sequence with normal python syntax
+            >>> f['chr1'][:10]
+            'ACTGACTGAC'
+
+        take the first basepair in each codon...
+            >>> f['chr1'][0:10:3]
+            'AGTC'
+
+        """
         self.fasta_name = fasta_name
         self.gdx = fasta_name + ".gdx"
         self.flat = fasta_name + ".flat"
@@ -134,7 +160,6 @@ class Fasta(dict):
 
     def __getitem__(self, i):
         # this implements the lazy loading an only allows a single 
-        # memmmap to be open at one time.
         if i in self.chr:
             return self.chr[i]
 

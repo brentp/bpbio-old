@@ -36,8 +36,13 @@ Usage
     >>> f['chr1'][:10]
     'ACTGACTGAC'
 
+    # get the 1st basepair in every codon (it's python yo)
+    >>> f['chr1'][::3]
+    'AGTCAGTCAGTCAGTCAGTCAGTCAGT'
 
-    # the index stores the start and stop of each header from teh fasta file
+
+    # the index stores the start and stop of each header from the fasta file.
+    # (you should never need this)
     >>> f.index
     {'chr3': (160, 3760), 'chr2': (80, 160), 'chr1': (0, 80)}
 

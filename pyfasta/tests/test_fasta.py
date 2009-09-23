@@ -34,6 +34,13 @@ class FastaTest(unittest.TestCase):
         self.assertEqual(str(self.f['chr2']), s)
 
 
+    def test_slice_size(self):
+        self.assertEqual(self.f['chr3'][:7], 'ACGCATT')
+        # take the first basepair of each codon
+        self.assertEqual(self.f['chr3'][0:7:3], 'ACT')
+        # take the 2nd basepair of each codon
+        self.assertEqual(self.f['chr3'][1:7:3], 'CA')
+
     def test_slice(self):
         f = self.f
         self.assertEqual(str(f['chr3'][:4]), 'ACGC')
