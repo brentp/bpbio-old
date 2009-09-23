@@ -43,14 +43,18 @@ Slicing
     'AGTCAGTCAGTCAGTCAGTCAGTCAGT'
 
 
-    # the index stores the start and stop of each header from the fasta file.
-    # (you should never need this)
+    # the index stores the start and stop of each header from the flattened 
+    # fasta file. (you should never need this)
     >>> f.index
     {'chr3': (160, 3760), 'chr2': (80, 160), 'chr1': (0, 80)}
 
 
     # can query by a 'feature' dictionary
     >>> f.sequence({'chr': 'chr1', 'start': 2, 'stop': 9})
+    'CTGACTGA'
+
+    # same as:
+    >>> f['chr1'][1:9]
     'CTGACTGA'
 
     # with reverse complement for - strand
@@ -73,6 +77,11 @@ Numpy Array Interface
     array(['A', 'A', 'A', 'A'], 
           dtype='|S1')
 
+    # mask a sub-sequence:
+    >>> a[11:13] = np.array('N', dtype='c')
+    >>> a[10:14].tostring()
+    'ANNA'
+   
 
     # cleanup (though for real use these will remain for faster access)
     >>> import os
