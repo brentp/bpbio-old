@@ -1,8 +1,10 @@
 from distutils.core import setup
 from setuptools import setup
 
+version="0.0.1"
 
 setup(name='skidmarks',
+      version=version,
      description="find runs (non-randomness) in sequences",
       url="http://code.google.com/p/bpbio/",
       long_description=open('README.txt').read(),
