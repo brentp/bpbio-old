@@ -160,6 +160,15 @@ def gap_test(sequence, item=None):
     >>> gap_test('101010111101000')
     {'chi': 11.684911193438811, 'item': '1', 'p': 0.23166089118674466}
 
+
+    gap_test() will default to looking for gaps between the first value in
+    the sequence (in this case '1') and each later occurrence. use the `item`
+    kwarg to specify another value.
+
+        >>> gap_test('101010111101000', item='0')
+        {'chi': 11.028667632612191, 'item': '0', 'p': 0.27374903509732523}
+
+
     """
 
     if item is None: item=sequence[0] 
