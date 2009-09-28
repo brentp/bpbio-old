@@ -17,8 +17,9 @@ Any feedback or improvements are welcomed
 Wald-Wolfowitz
 ---------------
 
-    http://en.wikipedia.org/wiki/Wald-Wolfowitz_runs_test
-    http://support.sas.com/kb/33/092.html
+http://en.wikipedia.org/wiki/Wald-Wolfowitz_runs_test
+
+http://support.sas.com/kb/33/092.html
 
     >>> r = wald_wolfowitz('1000001')
     >>> r['n_runs'] # should be 3, because 1, 0, 1
@@ -27,7 +28,7 @@ Wald-Wolfowitz
     >>> r['p'] < 0.05 # not < 0.05 evidence to reject Ho of random sequence
     False
 
-    # this should show significance for non-randomness
+# this should show significance for non-randomness
     >>> li = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
     >>> wald_wolfowitz(li)['p'] < 0.05
     True
@@ -48,7 +49,7 @@ Autocorrelation
 Serial Test
 ------------
 
-    http://books.google.com/books?id=EIbxfCGfzgcC&lpg=PA141&ots=o-8ymmqbs9&pg=PA142#v=onepage&q=&f=false
+http://books.google.com/books?id=EIbxfCGfzgcC&lpg=PA141&ots=o-8ymmqbs9&pg=PA142#v=onepage&q=&f=false
 
     >>> serial_test('101010101111000')
     {'chi': 1.4285714285714286, 'p': 0.69885130769248427}
@@ -60,10 +61,17 @@ Serial Test
 Gap Test
 ---------
 
-    http://books.google.com/books?id=EIbxfCGfzgcC&lpg=PA141&ots=o-8ymmqbs9&pg=PA142#v=onepage&q=&f=false
+http://books.google.com/books?id=EIbxfCGfzgcC&lpg=PA141&ots=o-8ymmqbs9&pg=PA142#v=onepage&q=&f=false
 
     >>> gap_test('100020001200000')
     {'chi': 756406.99909855379, 'item': '1', 'p': 0.0}
 
     >>> gap_test('101010111101000')
     {'chi': 11.684911193438811, 'item': '1', 'p': 0.23166089118674466}
+
+gap_test() will default to looking for gaps between the first value in
+the sequence (in this case '1') and each later occurrence. use the `item`
+kwarg to specify another value.
+
+    >>> gap_test('101010111101000', item='0')
+    {'chi': 11.028667632612191, 'item': '0', 'p': 0.27374903509732523}
