@@ -1,8 +1,7 @@
 cdef extern from *:
     ctypedef char* const_char_star "const char*"
 
-cdef extern from "stdio.h":
-    int sscanf(char* astr, const_char_star format, ...)
+cimport stdlib
 
 cdef extern from "Python.h":
     char *PyString_AsString(object)
@@ -16,13 +15,48 @@ cdef extern from "stdio.h":
         pass
     FILE * fopen(char *, char *)
     int fscanf(FILE * i, char * fmt, ...)
+    void rewind(FILE * f)
     cdef int fclose(FILE *)
     cdef Py_ssize_t strlen(char *)
     int EOF
 
+    int sscanf(char* astr, const_char_star format, ...)
+    char *fgets(char *line, int maxline, FILE *fp)
 
 
 
+cdef class BlastFile:
+    cdef FILE* fh
+    cdef object filename
+    def __cinit__(self, char* filename):
+        self.fh = fopen(filename, 'r')
+        self.filename = filename
+
+    def __iter__(self):
+        rewind(self.fh)
+        return self
+        
+    def __next__(self):
+        cdef float pct = 0.0, evalue = 0.0, bit = 0.0
+        cdef char qname[512], sname[512]
+        cdef int hlen, nmiss, ngap, qstart, qstop, sstart, sstop
+        cdef char *tmp
+        cdef int success
+        success = fscanf(self.fh, blast_format_line, qname, sname, \
+                         &pct, &hlen, &nmiss, &ngap, &qstart, &qstop,\
+                         &sstart, &sstop, &evalue, &bit )
+        if success == EOF:
+            raise StopIteration
+        return create_blast_line(qname, sname, pct, hlen, nmiss, ngap,
+                        qstart, qstop, sstart, sstop, evalue, bit)
+
+    def __dealloc__(self):
+        fclose(self.fh)
+
+    def __repr__(self):
+        return "BlastFile('%s')" % (self.filename, )
+
+import sys
 
 cdef class BlastLine:
     r"""
@@ -74,10 +108,14 @@ cdef class BlastLine:
 
     def __richcmp__(BlastLine self, BlastLine other, size_t op):
         if op == 2: # ==
-            if self.query != other.query and self.qstart != other.qstart: return False
-            return self.subject == other.subject and self.qstop == other.qstop and \
-                    self.sstop == other.sstop and self.evalue == other.evalue and \
+            if self.query != other.query and self.qstart != other.qstart: 
+                return False
+            return self.subject == other.subject and \
+                    self.qstop == other.qstop and \
+                    self.sstop == other.sstop and \
+                    self.evalue == other.evalue and \
                     self.hitlen == other.hitlen
+
         elif op == 3: # !=
             return not self.__richcmp__(other, 2)
         else:
@@ -85,9 +123,11 @@ cdef class BlastLine:
 
 
     def __repr__(self):
-        return "BlastLine('%s'[%i]-'%s'[%i], ptcid=%.3f, eval=%.3f, score=%.1f)" \
-            % (self.query, self.qstart, self.subject, self.sstart, self.pctid, \
-               self.evalue, self.score)
+        return ("BlastLine(%s[%i:%i]-%s[%i:%i], " +\
+                   "ptcid=%.3f, eval=%.3f)") \
+            % (self.query, self.qstart, self.qstop, self.subject, self.sstart,\
+               self.sstop, self.pctid, 
+               self.evalue)
 
     """
     @classmethod
