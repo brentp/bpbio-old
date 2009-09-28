@@ -9,7 +9,7 @@ Skid Marks: Check for runs in sequences
 This module implements some functions to check a sequence for randomness.
 in some cases, it is assumed to be a binary sequence (not only 1's and 0's
 but containing only 2 distinct values).
-Any feedback or improvements are welcomed
+Any feedback, improvements, additions are welcomed.
 
     >>> from skidmarks import gap_test, wald_wolfowitz, auto_correlation, serial_test
 
