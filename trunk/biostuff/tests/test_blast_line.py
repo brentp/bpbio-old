@@ -1,7 +1,31 @@
-from biostuff import BlastLine
+from biostuff import BlastLine, BlastFile
 
 some_attrs = ('qstart', 'qstop', 'sstart', 'sstop', 'pctid', 'score', 'query',
         'subject')
+
+def test_blastfile():
+    f = "tests/data/tabd.blast" 
+    bf = BlastFile(f)
+    fh = open(f, 'r')
+
+    # iterate via python and c and check each line is the same.
+    for line, b in zip(fh, bf):
+        bl = BlastLine(line)
+        assert isinstance(b, BlastLine)
+        assert bl == b
+
+    i = 0
+    for c in bf:
+        i += 1
+        assert isinstance(c, BlastLine)
+    assert i == len(open(f).readlines())
+
+    del bf
+
+def test_blastfile_list():
+    f = "tests/data/tabd.blast" 
+    blasts = list(BlastFile(f))
+    assert len(blasts) == len(open(f).readlines())
 
 def test_blastline():
     f = "tests/data/tabd.blast" 
@@ -57,4 +81,3 @@ def test_pickle():
     loaded.query = "asdf"
 
     assert loaded.query != line.query
-
