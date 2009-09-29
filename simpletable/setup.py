@@ -1,10 +1,11 @@
 from setuptools import setup
 
 import simpletable
+version = '0.1'
 
 setup(name          = 'simpletable',
-      version       = '0.0.1',
-      description   = 'wrapper around pytables/hd5f to simplify making/using tables',
+      version       = version,
+      description   = 'wrapper around pytables/hd5f to simplify using structured data',
       license       = 'BSD',
       keywords      = 'hdf5 pytables tables numpy',
       author        = 'Brent Pedersen',
@@ -15,15 +16,14 @@ setup(name          = 'simpletable',
       install_requires = ['tables'],
       zip_safe=False,
       py_modules = ['simpletable'],
-      #test_suite = 'nose.collector',
-      #tests_require = ['nose'],
       classifiers   = [
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: BSD License'
+        'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Topic :: Scientific/Engineering'
+        'Topic :: Scientific/Engineering',
+        'Topic :: Database'
         ],
 )
