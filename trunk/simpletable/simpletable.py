@@ -1,23 +1,31 @@
 """
 
-SimpleTable: simple wrapper around pytables hdf5
+SimpleTable: simple wrapper around `pytables`_ hdf5
 ------------------------------------------------------------------------------
+
+.. _`pytables`: http://pytables.org
+
+This module removes some of the boiler-plate code required to use the excellent `pytables`_
+module to save and access structured data.
 
 Example Usage::
 
   >>> from simpletable import SimpleTable
   >>> import tables
 
-  # define the table as a subclass of simple table.
+define a table as a subclass of simple table.
+
   >>> class ATable(SimpleTable):
   ...     x = tables.Float32Col()
   ...     y = tables.Float32Col()
   ...     name = tables.StringCol(16)
 
-  # instantiate with: args: filename, tablename
+instantiate with: args: filename, tablename
+
   >>> tbl = ATable('test_docs.h5', 'atable1')
 
-  # insert as with pytables:
+insert as with pytables:
+
   >>> row = tbl.row
   >>> for i in range(50):
   ...    row['x'], row['y'] = i, i * 10
@@ -25,11 +33,12 @@ Example Usage::
   ...    row.append()
   >>> tbl.flush()
 
-  # there is also insert_many() method() with takes an iterable
-  # of dicts with keys matching the colunns (x, y, name) in this
-  # case.
+there is also `insert_many()` method with takes an iterable
+of dicts with keys matching the colunns (x, y, name) in this
+case.
 
-  # query the data (query() alias of tables' readWhere()
+query the data (query() alias of tables' readWhere()
+
   >>> tbl.query('(x > 4) & (y < 70)') #doctest: +NORMALIZE_WHITESPACE
   array([('name_5', 5.0, 50.0), ('name_6', 6.0, 60.0)],
         dtype=[('name', '|S16'), ('x', '<f4'), ('y', '<f4')])
