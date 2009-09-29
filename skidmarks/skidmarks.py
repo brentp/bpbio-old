@@ -132,15 +132,14 @@ def serial_test(sequence):
     {'chi': 18.615384615384617, 'p': 0.00032831021826061683}
 
     """
-    if isinstance(sequence, basestring):
-        sequence = map(int, sequence)
+    #if isinstance(sequence, basestring): sequence = map(int, sequence)
     pairwise = izip(sequence[1:], sequence[:-1])
     d = collections.defaultdict(int)
     for k in pairwise: d[k] += 1
+    # order doesnt matter because the expected are all the same.
     obs = np.array(d.values())
     exp = np.ones_like(obs) * obs.mean()
 
-    # is the the correct way to run this test?
     chi, pval =  chisquare(obs, exp)
     return {'chi': chi, 'p': pval}
 
