@@ -126,7 +126,7 @@ class GFFLine(object):
 
     def __repr__(self):
         return "GFFLine(%s %s:%i .. %i)" % (self.seqid,
-                          self.attrs.get("ID", ""), self.start, self.end)
+                          self.attrs.get("ID", self.attrs.get("Parent", "")), self.start, self.end)
 
     def to_line(self):
         s =  [getattr(self, s) for s in ('seqid', 'com', 'type', 'start', 'end', 'orig', 'strand',
