@@ -2,7 +2,7 @@ from matplotlib.patches import FancyArrow, Rectangle
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 from cStringIO import StringIO
-from matplotlib.ticker import Formatter, LinearLocator
+from matplotlib.ticker import Formatter
 from mpl_toolkits.axes_grid import axes_size as Size
 from mpl_toolkits.axes_grid import Divider
 
@@ -17,11 +17,7 @@ class BasePairTickFormatter(Formatter):
                 return x.rstrip('0').rstrip('.') + fmt
         return str(int(x))
 
-class BasePairLocator(LinearLocator):
-    pass
-
  
-
 def xy_dxy(start, stop, strand):
         if strand in ('-1', '-', -1):
             x = stop
@@ -35,8 +31,7 @@ def xy_dxy(start, stop, strand):
 class Gene(FancyArrow):
     def __init__(self, text, start, stop, strand=None, width=0.14, ec='none', **kwargs):
         assert start <= stop
-        self.text = text
-
+        self.text = text 
         x, y, dx = xy_dxy(start, stop, strand)
         head_length = self.get_head_length(start, stop, strand, kwargs)
 
@@ -58,30 +53,29 @@ class Gene(FancyArrow):
         return head_length
 
 class Block(Rectangle):
-    def __init__(self, text, start, stop, strand=None, width=0.25, ec='none', y=None, **kwargs):
+    def __init__(self, text, start, stop, strand=None, height=0.15, ec='none', y=None, **kwargs):
         x, _, dx = xy_dxy(start, stop, strand)
         if y is None:
             y = 0.25
         self._textx = start + abs(dx)/ 20.
         self._texty = y
         self.text = text
-        w = width
         if not ec in ('none', None) and not kwargs.get('fc'):
             kwargs['fc'] = ec
-        Rectangle.__init__(self, (x, y - w / 2.0), width=dx, height=w, ec=ec, **kwargs)
+        Rectangle.__init__(self, (x, y - height / 2.0), width=dx, height=height, ec=ec, **kwargs)
 
 class HSP(Block):
-    def __init__(self, start, stop, strand=None, width=0.18, fc='#cacaca', ec='#777777', **kwargs):
-        if not 'y' in kwargs: kwargs['y'] = 0.5
-        Block.__init__(self, None, start, stop, strand, width=width, fc=fc, ec=ec, **kwargs)
 
-    
+    def __init__(self, start, stop, strand=None, height=0.02, fc='#cacaca', ec='#777777', **kwargs):
+        if not 'y' in kwargs: kwargs['y'] = 0.5
+        Block.__init__(self, None, start, stop, strand, height=height, fc=fc, ec=ec, **kwargs)
+
 
 class CDS(Block):
     def __init__(self, start, stop, strand=None, **kwargs):
         fc = kwargs.get('fc', 'red')
         kwargs['fc'] = fc
-        kwargs['width'] = kwargs.get('width', 0.18)
+        kwargs['height'] = kwargs.get('height', 0.18)
         kwargs['ec'] = 'black'
 
         Block.__init__(self, None, start, stop, strand, **kwargs)
@@ -98,6 +92,7 @@ class ThreeAxFigure(Figure):
         self.setup_axes()
 
     def setup_axes(self):
+        # TODO axes 2 should have y-scale.
 
         rect = (0, 0.07, 1, 1) 
         axes = [self.add_axes(rect, autoscale_on=False, aspect='auto', alpha=1.0, label=str(i)) for i in range(3)]
@@ -149,6 +144,13 @@ class ThreeAxFigure(Figure):
         if autoscale:
             self.axes[MIDDLE_AXIS].axes.autoscale_view(scalex=False, scaley=True)
 
+        ylim = self.axes[MIDDLE_AXIS].get_ylim()
+        h = ylim[1] - ylim[0]
+        for p in self.axes[MIDDLE_AXIS].patches:
+            if isinstance(p, HSP):
+                p.set_height(p.get_height() * h)
+
+
         if filename is None:
             s = StringIO()
             self.canvas.print_figure(s, dpi=self.dpi)
@@ -187,11 +189,12 @@ if __name__ == "__main__":
     nostrand = Block("someblock", 1000, 1200, fc='red', ec='black', y=0.7)
     gf.add_patch(nostrand, MIDDLE_AXIS)
 
-    gf.add_patch(HSP(1460, 1503), MIDDLE_AXIS)
+    gf.add_patch(HSP(1400, 1595), MIDDLE_AXIS)
     import numpy as np
     gf.axes[1].plot(np.sin(np.linspace(0, 10, 1600)))
 
     gf.set_xlim(0, 1600)
+    #gf.axes[1].set_ylim(0, 10)
     gf.save('/var/www/t/t.png')
 
  
