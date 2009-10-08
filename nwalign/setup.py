@@ -5,12 +5,16 @@ from distutils.extension import Extension
 version = '0.1'
 import numpy
 np_include = numpy.get_include()
-import nwalign
+try:
+    import nwalign
+    doc = nwalign.__doc__
+except:
+    doc = ""
 
 setup(name='nwalign',
       version=version,
       description="Needleman-Wunsch global sequence alignment",
-      long_description=nwalign.__doc__,
+      long_description=doc,
       ext_modules=[ Extension("nwalign",
                               #sources=["nwalign.pyx"],
                       sources=["nwalign.c"],
