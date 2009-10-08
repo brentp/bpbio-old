@@ -33,6 +33,11 @@ insert as with pytables:
   ...    row.append()
   >>> tbl.flush()
 
+access the entire array via the numpy array interface
+  >>> import numpy as np
+  >>> np.asarray(tbl)
+
+
 there is also `insert_many()` method with takes an iterable
 of dicts with keys matching the colunns (x, y, name) in this
 case.
@@ -99,6 +104,16 @@ class SimpleTable(tables.Table):
 
     query = tables.Table.readWhere
 
+    @property
+    def __array_interface__(self):
+        return {
+            'shape': (self.nrows, ),
+            'version': 3,
+            'typestr': self.dtype.str,
+            'descr': self.dtype.descr,
+            'data': self[:].data,
+        }
+
 # convience sublcass that i use a lot.
 class BlastTable(SimpleTable):
       query      = tables.StringCol(5)
@@ -122,4 +137,4 @@ if __name__ == '__main__':
     import doctest
     doctest.testmod()
     import os
-    os.unlink('test_docs.h5')
+    #os.unlink('test_docs.h5')
