@@ -1,7 +1,13 @@
 from setuptools import setup
 
-import simpletable
-version = '0.1'
+try:
+    import simpletable
+    doc = simpletable.__doc__
+except:
+    doc = ""
+version = '0.2'
+
+
 
 setup(name          = 'simpletable',
       version       = version,
@@ -12,7 +18,7 @@ setup(name          = 'simpletable',
       author_email  = 'bpederse@gmail.com',
       url   = 'http://bpbio.googlecode.com/',
       download_url = 'http://bpbio.googlecode.com/svn/trunk/simpletable/',
-      long_description = simpletable.__doc__,
+      long_description = doc,
       install_requires = ['tables'],
       zip_safe=False,
       py_modules = ['simpletable'],
