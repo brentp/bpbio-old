@@ -79,15 +79,27 @@ def gen_deletions(region_length,
 
     region = range(region_length)
     deletion_count = 1
+    current_region_length = region_length
+
     for event in range(num_deletions):
 
         # can be: randint(0, region_length - 1 - deletion_count)
-        deletion_idx = randint(0, len(region) - 1)
+        #deletion_start = randint(0, len(region) - 1)
+        #assert current_region_length == len(region), (current_region_length, len(region), event)
+        deletion_start = randint(0, current_region_length - 1)
+
         deletion_length = choice(deletion_lengths)
 
-        stop = min(region_length, deletion_idx + deletion_length)
+        deletion_stop = deletion_start + deletion_length
+        if deletion_stop > current_region_length:
+            deletion_length -= (deletion_stop - current_region_length)
+            deletion_stop = current_region_length
 
-        del region[deletion_idx:stop]
+
+
+        del region[deletion_start:deletion_stop]
+        current_region_length -= deletion_length
+
 
         deletion_count += deletion_length
         if deletion_count > num_deletions:
@@ -103,7 +115,7 @@ def gen_deletions(region_length,
     if count_retentions:
         runs = count_runs(deletion_string)
     else:
-        runs = count_deletion_runs(deletion_string)
+        runs = count_runs(deletion_string, "1")
 
     return deletion_string, runs
 
@@ -111,8 +123,8 @@ def initializator(genome, **args):
     """ used for the genetic algorithm initialize the deletion lengths
     to randomly chosen values between 1 and 6"""
     genome.clearList()
-    rmax = genome.getParam("rangemax")
     rmin = genome.getParam("rangemin")
+    rmax = genome.getParam("rangemax")
     for i in range(GA_LEN):
         genome.append(randint(rmin, rmax))
 
@@ -124,10 +136,11 @@ def mutator(genome, **args):
     """
     rmax = genome.getParam("rangemax")
     rmin = genome.getParam("rangemin")
-    l = len(genome)
-    nmutations = randint(0, 4)
+    #l = len(genome)
+    l = GA_LEN
+    n_mutations = randint(0, 4)
     mutations = 0
-    while mutations < nmutations:
+    while mutations < n_mutations:
         idx = randint(0, l - 1)
         change = choice([-1, 1])
         v = genome[idx] 
@@ -161,7 +174,7 @@ def run_sim(astr):
 
         # since gen_deletions is random, do multiple tries to 
         # make sure an outlier doesnt screw it up.
-        ntries = 20
+        ntries = 10
         asum = 0.0
         for tries in range(ntries):
             sim_str, sim_runs = gen_deletions(region_length, 
@@ -193,8 +206,8 @@ def run_sim(astr):
     return {'deletion_lengths': sorted(list(best)), 'fitness': best.fitness,
             'score': best.score}
 
-GA_LEN = 10
-GA_GENERATIONS = 20
+GA_LEN = 25
+GA_GENERATIONS = 10000
 MAX_DELETION_SIZE = 10 
 
 if __name__ == "__main__":
