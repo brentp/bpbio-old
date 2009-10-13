@@ -24,12 +24,20 @@ string. the GA tries to minimize the difference between
 the run counts. 
 
 """
+import sys
+
 from pyevolve import G1DList
 from pyevolve import GSimpleGA
 from pyevolve.Consts import minimaxType
 
 from itertools import groupby
 from random import randint, choice
+try:
+    import psyco
+    psyco.full()
+    print >>sys.stderr, "using psyco"
+except:
+    print >>sys.stderr, "no psyco"
 
 def count_deletion_runs(astr, deletion="_"):
     """
@@ -208,7 +216,7 @@ def run_sim(astr):
 
 GA_LEN = 25
 GA_GENERATIONS = 10000
-MAX_DELETION_SIZE = 10 
+MAX_DELETION_SIZE = 10000 # > 1000 is same as no removal. 
 
 if __name__ == "__main__":
     # expects a string of deletions 1_1111_11 where "_" is the deletion
