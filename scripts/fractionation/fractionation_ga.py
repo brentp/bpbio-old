@@ -216,7 +216,7 @@ def run_sim(astr):
 
 GA_LEN = 25
 GA_GENERATIONS = 10000
-MAX_DELETION_SIZE = 10000 # > 1000 is same as no removal. 
+MAX_DELETION_SIZE = 10 # > 1000 is same as no removal. 
 
 if __name__ == "__main__":
     # expects a string of deletions 1_1111_11 where "_" is the deletion
@@ -231,8 +231,9 @@ if __name__ == "__main__":
 
     import re
     delstrs = dict(
-        overs = open('over.txt').read().strip(),
-        unders = open('under.txt').read().strip()
+        #overs = open('over.txt').read().strip(),
+        #unders = open('under.txt').read().strip(),
+        both = open('both.txt').read().strip()
     )
     # all deletions longer than this are collapsed to nothing
     # assumed not to be real.
