@@ -67,9 +67,8 @@ def count_runs(astr, splitter="_"):
         runs.setdefault(i, 0)
     return sorted(runs.items())
 
-def gen_deletions(region_length, 
-                  deletion_lengths=[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3],
-                                    num_deletions=0.5, count_retentions=False):
+def gen_deletions(region_length, deletion_lengths, num_deletions=0.5, 
+                  count_retentions=False):
     """
     :param region_length: the length in genes of the region to simulate
     :param deletion_lengths`: an iterable of numbers to choose randomly for the 
