@@ -53,6 +53,9 @@ def add_dash(params):
 
 def is_protein_db(blast_cfg):
     return blast_cfg["p"] in ("blastx", "blastp")
+
+def rm(f):
+    if os.path.exists(f): os.unlink(f)
    
 
 def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False, blast_log=None):
@@ -68,7 +71,11 @@ def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False, blast_log=N
 
     ext = ".pin" if protein == "T" else ".nin"
     if not is_current_file(s_fasta + ext, s_fasta):
-        sh(cmd)
+        try:
+            sh(cmd)
+        except KeyboardInterrupt:
+            import glob
+            for f in glob.glob(s_fasta + ".*"): rm(f)
     else:
         log.warn("NOT running cmd:\n%s\n because %s.nin is up to date" % (cmd, s_fasta))
     blast_file = ""
