@@ -76,6 +76,7 @@ def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False, blast_log=N
         except KeyboardInterrupt:
             import glob
             for f in glob.glob(s_fasta + ".*"): rm(f)
+            raise
     else:
         log.warn("NOT running cmd:\n%s\n because %s.nin is up to date" % (cmd, s_fasta))
     blast_file = ""
