@@ -118,8 +118,8 @@ def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False, blast_log=N
         try:
             sh(cmd, blast_log=blast_log)
         except:
-            if os.path.exists(blast_file):
-                os.unlink(blast_file)
+            rm(blast_file)
+            rm(blast_file + ".cmd")
             raise
 
         if os.path.exists(blast_file):
