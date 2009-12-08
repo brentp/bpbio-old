@@ -7,6 +7,12 @@ logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(os.path.basename(__file__))
 
 def get_blast_file(qfasta, sfasta, out_dir=None):
+    """
+    >>> get_blast_file("/tmp/a.fasta", "b.fasta")
+    'a_vs_b.blast'
+    >>> get_blast_file("/tmp/a.fasta", "b.fasta", out_dir=True)
+    '/tmp/a_vs_b.blast'
+    """
     q = os.path.basename(qfasta)
     s = os.path.basename(sfasta)
     blast_file = q[:q.rfind(".")] + "_vs_" + s[:s.rfind(".")] + ".blast"
@@ -17,6 +23,12 @@ def get_blast_file(qfasta, sfasta, out_dir=None):
     return os.path.join(out_dir, blast_file)
 
 def is_current_file(a, b):
+    """
+    >>> is_current_file(__file__, 'a.txt')
+    False
+    >>> is_current_file(__file__, __file__)
+    False
+    """
     if not (os.path.exists(a) and os.path.exists(b)): return False
     am = os.stat(a).st_mtime
     bm = os.stat(b).st_mtime
@@ -40,6 +52,10 @@ def sh(cmd, blast_log=None):
     r = proc.communicate()
 
 def add_dash(params):
+    """
+    >>> add_dash({'p': 'F', 'save': 'T'})
+    {'-p': 'F', '--save': 'T'}
+    """
     d = {}
     for k, v in params.items():
         if k.startswith("-"):
@@ -52,6 +68,10 @@ def add_dash(params):
 
 
 def is_protein_db(blast_cfg):
+    """
+    >>> is_protein_db({'p': 'blastx'})
+    True
+    """
     return blast_cfg["p"] in ("blastx", "blastp")
 
 def rm(f):
@@ -131,6 +151,12 @@ def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False, blast_log=N
         log.error("NOT running cmd:\n%s\n because %s is up to date" % (cmd, blast_file))
 
 def check_args(args):
+    """
+    >>> args = {'i': 'a.fasta', 'd': 'b.fasta'}
+    >>> check_args(args)
+    >>> args
+    {'i': 'a.fasta', 'p': 'blastn', 'd': 'b.fasta', 'a': '4'}
+    """
     if not "p" in args: args["p"] = "blastn"
     assert "i" in args, "need to specify a query fasta"
     assert "d" in args, "need to specify a query fasta"
@@ -172,9 +198,6 @@ def handle_temps(args):
     >>> open(args['d']).read() #doctest: +NORMALIZE_WHITESPACE
     '>chr1\\nGGGGGG\\n'
     """
-
-
-    
     def _h(fname):
         if not "[" in fname: return fname
         start = None
