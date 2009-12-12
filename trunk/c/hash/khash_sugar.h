@@ -10,7 +10,7 @@
 // 1. include khash.h
 // 2. typde key_type
 //    and val_type 
-// 3. define MISSING. to match val_type
+// 3. define MISSING_VALUE. to match val_type
 // 4. initialize. (either HASH_INIT_STR_KEYS or HASH_INIT_INT_KEYS)
 // 5. include khash_sugar.h
 
@@ -32,6 +32,6 @@ inline void hash_put(hash *h, key_type key, val_type value){
 }
 
 inline val_type hash_get(hash *h, key_type key){
-    khiter_t k = kh_get_(h, key);
-    return k == kh_end(h) ? MISSING : kh_value(h, k);
+    khiter_t k = kh_get(,h, key);
+    return k == kh_end(h) ? MISSING_VALUE : kh_value(h, k);
 }

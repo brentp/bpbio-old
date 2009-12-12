@@ -318,6 +318,6 @@ typedef const char *kh_cstr_t;
 #define HASH_INIT_STR_KEYS(khval_t)      \
     KHASH_MAP_INIT_STR(, khval_t)	     
 #define HASH_INIT_INT_KEYS(khval_t)      \
-    KHASH_MAP_INIT_INT64(name, khval_t)	 
+    KHASH_MAP_INIT_INT64(, khval_t)	 
 
 #endif /* __AC_KHASH_H */

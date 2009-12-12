@@ -3,7 +3,7 @@
 
 typedef const char *key_type; // 2. typde key_type
 typedef double val_type;      //    and val_type 
-#define MISSING 999.999       // 3. define MISSING. to match val_type
+#define MISSING_VALUE 999.999       // 3. define MISSING. to match val_type
 HASH_INIT_STR_KEYS(val_type)  // 4. initialize. (either HASH_INIT_STR_KEYS or HASH_INIT_INT_KEYS)
 
 #include "khash_sugar.h"      // 5. include khash_sugar.h
