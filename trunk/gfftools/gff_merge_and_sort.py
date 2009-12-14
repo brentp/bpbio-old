@@ -32,7 +32,7 @@ for fi in files:
         o = GFFLine(line)
         fid = o.attribs.get('Parent', o.attribs.get('rname', o.attribs.get('ID')))
         # hack...
-        if 'mRNA' in fid and fid[-1].isdigit(): # something.mRNA.1
+        while 'mRNA' in fid and fid[-1].isdigit(): # something.mRNA.1
             fid = fid[:-2]
 
         fid = fid.rstrip('.mRNA')
