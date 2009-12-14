@@ -155,9 +155,10 @@ def order_from_hits(hit_file):
     for line in open(hit_file):
         line = line.split("\t")
 
-        #key = line[1] + line[5]
-        #if key in seen: continue
-        #seen[key] = None
+        #NOTE: at some point, this was commented out...
+        key = line[1] + line[5]
+        if key in seen: continue
+        seen[key] = None
 
         qchr, qname = line[:2]
         qstart, qstop = map(int, line[2:4])
