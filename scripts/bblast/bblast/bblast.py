@@ -44,12 +44,17 @@ def is_same_blast_params(blast_file, cmd):
     return cmd.strip() == open(params_file).read().strip()
 
 def sh(cmd, blast_log=None):
-    """ run a commmand in the shell"""
+    """run a commmand in the shell
+    # waiting for bugfix in nose.
+    #>>> sh("echo 'hi'")
+    'hi'
+    """
     if not blast_log is None:
         cmd += " 2>%s" % blast_log
     log.debug(cmd)
     proc = Popen(cmd, stdout=sys.stdout, stderr=sys.stderr, shell=True)
     r = proc.communicate()
+    return r
 
 def add_dash(params):
     """
@@ -79,6 +84,10 @@ def rm(f):
    
 
 def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False, blast_log=None):
+    """
+    >>> blast({'i': 'tests/a.fasta', 'd': 'tests/a.fasta'})
+
+    """
     blast_cfg = _blast_cfg.copy()
     check_args(blast_cfg)
     q_fasta = blast_cfg["i"]
