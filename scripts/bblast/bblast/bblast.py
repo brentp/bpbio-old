@@ -197,6 +197,9 @@ def handle_temps(args):
 
     >>> open(args['d']).read() #doctest: +NORMALIZE_WHITESPACE
     '>chr1\\nGGGGGG\\n'
+
+    >>> rm(args['d'])
+    >>> rm(args['i'])
     """
     def _h(fname):
         if not "[" in fname: return fname
