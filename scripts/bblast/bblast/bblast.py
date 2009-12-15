@@ -156,6 +156,8 @@ def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False, blast_log=N
             log.debug("\n\n%s lines of blast output sent to %s" % (lines, blast_file))
         else:
             log.error("\n\nERROR: blast not run")
+            if not blast_log is None:
+                log.error(open(blast_log).read())
     else:
         log.error("NOT running cmd:\n%s\n because %s is up to date" % (cmd, blast_file))
 
