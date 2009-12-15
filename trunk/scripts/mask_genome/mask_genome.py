@@ -36,9 +36,24 @@ H5 = 'copy_count.h5'
 def get_node(org, mode):
     # get the parent group node in the h5 file.
     if mode == 'w':
-        h5 = tables.openFile(H5, mode='w')
+        h5 = tables.openFile(H5, mode='a')
         if org in h5.root:
-            raise Exception('that organism already exists in %s' % H5)
+            action = raw_input(\
+               """%s copy counts exist in %s. what to do [d/a/u]?
+                   'd': delete them and create new copy-counts
+                   'a': abort
+                   'u': use the existing copy-counts
+                you can use the existing counts if the blast is unchanged."""
+                               % (org, H5))[0].lower()
+            if action == 'd':
+                getattr(h5.root, org)._f_remove(recursive=True)
+                h5.flush()
+            elif action == 'u':
+                h5.close()
+                return None, None
+            else:
+                print('ABORT: %s already exists in %s' % (org, H5))
+                h5.close(); sys.exit()
         return h5, h5.createGroup(h5.root, org, org)
     else:
         h5 = tables.openFile(H5, mode='r')
@@ -47,8 +62,12 @@ def get_node(org, mode):
 def count_freq(blast_file, fasta, org):
     """one large blast file """
     h5, node = get_node(org, 'w')
+
+    # use existing counts.
+    if (h5, node) == (None, None): return
     f = Fasta(fasta)
 
+    print "counting..."
     cache = {}
     for sline in open(blast_file):
         line = sline.split("\t")
@@ -79,7 +98,7 @@ def mask(fasta_file, org, cutoff, mask_value='X'):
     outfile = fasta_file[:fasta_file.rfind(".")] + (".masked.%i" % cutoff) \
                          + fasta_file[fasta_file.rfind("."):]
 
-    print "creating file:", outfile
+    print "> masking sequence to file:", outfile
     out = open(outfile ,'w')
 
     fasta = Fasta(fasta_file)
@@ -98,7 +117,7 @@ def mask(fasta_file, org, cutoff, mask_value='X'):
 
 
         if not 'c' + seqid in node:
-            print >>sys.stderr, seqid, 'not found in masked, writing unchanged'
+            print >>sys.stderr, seqid, '! not found in masked, writing unchanged'
             out.write('>' + seqid + '\n')
             out.write(seq.tostring() + '\n')
             continue
@@ -107,7 +126,7 @@ def mask(fasta_file, org, cutoff, mask_value='X'):
         masked_seq = np.where(numexpr.evaluate("hit_counts > %i" % cutoff)
                               , mask_value, seq).tostring() 
 
-        print >>sys.stderr, seqid, len(seq)
+        print >>sys.stderr, "! seq:%s len:%i" %(seqid, len(seq))
         assert len(seq) == len(masked_seq)
         out.write('>' + seqid + '\n')
         out.write(masked_seq + '\n')
@@ -141,5 +160,5 @@ if __name__ == "__main__":
             sys.exit()
     assert len(options.mask) == 1 or options.mask.lower() == 'soft'
     count_freq(options.blast, options.fasta, options.org)
-    print "DONE COUNTING"
+    print "> done counting..."
     mask(options.fasta, options.org, options.cutoff, options.mask)
