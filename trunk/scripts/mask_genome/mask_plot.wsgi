@@ -11,26 +11,25 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from cStringIO import StringIO
 
-import glob
 DIR = os.path.abspath(os.path.dirname(__file__))
-f = glob.glob(DIR + "/*.h5")[0]
-h5 = tables.openFile(f)
+f = 'copy_count.h5'
+h5 = tables.openFile(os.path.join(DIR, f))
 
 def application(env, start_response):
     start_response("200 OK", [("Content-type", "image/png")])
 
     p = dict(parse_qsl(env['QUERY_STRING']))
+    org = p['org'] # e.g. thaliana_v7
 
 
     xmin = max(0, int(p['xmin']))
     xmax = int(p['xmax'])
 
-    chrn = "c%i" % int(p['chr'])
-    vals = h5.getNode('/count/%s' % (chrn,))[xmin:xmax+1]
+    seqid = "c%i" % int(p['seqid'])
+    vals = h5.getNode('/%s/%s' % (org, seqid))[xmin:xmax+1]
     ymax = 200
 
     io = StringIO()
-
 
     f = Figure(frameon=False)
     f.canvas = FigureCanvas(f)
