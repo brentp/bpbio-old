@@ -66,7 +66,6 @@ def parse_file(dag_file, evalue_cutoff):
 
     return matches
 
-TMPDIR='/tmp/'
 def gen_matches_by_seqid(matches):
     for a_seqid, b_seqid in sorted(matches):
         these_matches = matches[(a_seqid, b_seqid)]
@@ -172,7 +171,7 @@ a_seqid<tab>a_accn<tab>a_start<tab>a_end<tab>b_seqid<tab>b_accn<tab>b_start<tab>
     all_matches = parse_file(opts.dag, opts.evalue)
     for match_info in gen_matches_by_seqid(all_matches):
         a_seqid, b_seqid, filename, matches = match_info
-        #TODO: forward and reverse.
+
         for header, group in run_dag_chainer(a_seqid, b_seqid, filename, matches, "", opts):
             print_alignment(header, group, opts)
         for header, group in run_dag_chainer(a_seqid, b_seqid, filename, matches, "-r", opts):
