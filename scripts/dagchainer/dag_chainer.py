@@ -14,22 +14,47 @@ def scoringF(evalue, constant_match=CONSTANT_MATCH_SCORE, max_match=MAX_MATCH_SC
     matchScore = int(matchScore +.5) / 10
     return max_match if matchScore > max_match else matchScore
 
-def parse_file(dag_file, evalue_cutoff):
+def read_dag_line(line, dag_cols = ('a_seqid', 'a_accn', 'a_start', 'a_end',\
+                                    'b_seqid', 'b_accn', 'b_start', 'b_end',\
+                                    'evalue')):
+    tline = line[:-1].split("\t")
+    tline = line[:-1].split("\t")
 
-    dag_cols = ('a_seqid', 'a_accn', 'a_start', 'a_end', 'b_seqid', 'b_accn', 'b_start', 'b_end', 'evalue')
+    tline[2:4] = map(int, tline[2:4])
+    tline[6:8] = map(int, tline[6:8])
+    if len(tline) > 8:
+        tline[8] = max(float(tline[8]), 1e-250)
+        return dict(zip(dag_cols, tline))
+    return dict(zip(dag_cols[:8], tline))
+
+def get_dag_line(fh):
+    line = fh.readline()
+    while line and line[0] == '#':
+        line = fh.readline()
+    if not line: return None
+    return read_dag_line(line)
+
+def get_meta_gene(fh, header=[None]):
+    if header[0] is None:
+        header[0] = fh.readline()
+    while True: pass
+
+
+def parse_file(dag_file, evalue_cutoff, metagene=False):
+
     accn_info = {}
     matches = {}
-    for line in open(dag_file):
-        if line[0] == '#': continue
-        tline = line[:-1].split("\t")
+    fh = open(dag_file)
+    line = True
+    while line:
+        if metagene:
+            dag = get_meta_gene(fh)
+        else:
+            dag = get_dag_line(fh)
+            if dag is None: break
 
-        tline[2:4] = map(int, tline[2:4])
-        tline[6:8] = map(int, tline[6:8])
-        tline[8] = float(tline[8])
-        dag = dict(zip(dag_cols, tline))
         if dag['evalue'] >= evalue_cutoff: continue
         if dag['a_accn'] == dag['b_accn']: continue
-        if dag['evalue'] < 1e-250: dag['evalue'] = 1e-250
         
         if not dag['a_accn'] in accn_info:
             mid = int((dag['a_start'] + dag['a_end'] + 0.5) / 2)
@@ -129,6 +154,10 @@ def print_alignment(header, group, opts):
                      B['seqid'], B['accn'], B['start'], B['end'],
                      pair_dict['pair']['evalue'], pair_dict['dag_score'])
 
+def make_meta_genes(dag_file):
+    """ this merges genes in the same dag into a single meta
+    gene with start/stops equal to the extents of the region."""
+    pass
 
 if __name__ == "__main__":
     import optparse, sys
@@ -159,11 +188,23 @@ a_seqid<tab>a_accn<tab>a_start<tab>a_end<tab>b_seqid<tab>b_accn<tab>b_start<tab>
 
     p.add_option('-M', dest='max_match_score', type='float', default=50,
                 help="maximum score to be assigned to a match")
+    p.add_option('--meta_genes', dest='meta_genes', default=False, 
+                 action='store_true', help="""\
+                 if this flag is set, then the input is assumed to be
+                 a file that is normally output by dagchainer, containing
+                 genes grouped by diagonal. each group is merged into a single
+                 'meta' gene and the resulting 'meta'-genes are run as normal
+                 through dagchainer.""")
 
     opts, _ = p.parse_args() 
 
     if not opts.dag:
         sys.exit(p.print_help())
+
+    if opts.meta_genes:
+        # we write a new .dag file containing the
+        # meta_genes.
+        opts.dag = make_meta_genes(opts.dag)
 
     if opts.min_score is None:
         opts.min_score = int(opts.min_aligned_pairs * 0.5 * opts.max_match_score)
