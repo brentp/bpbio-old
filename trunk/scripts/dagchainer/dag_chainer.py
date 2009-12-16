@@ -67,23 +67,15 @@ def parse_file(dag_file, evalue_cutoff):
     return matches
 
 TMPDIR='/tmp/'
-def gen_matches_by_seqid(matches, tmpdir=TMPDIR):
+def gen_matches_by_seqid(matches):
     for a_seqid, b_seqid in sorted(matches):
-        filename = "%s/%s.vs.%s.dag.input" % (tmpdir, a_seqid, b_seqid)
-        ART = open(filename, 'w')
-        num2pair = []
         these_matches = matches[(a_seqid, b_seqid)]
-        for i, (accn_key, pair) in enumerate(these_matches.iteritems()):
-            #print accn_key, accn_dict
-            num2pair.append(pair)
-            score = scoringF(pair['evalue'])
-            print >>ART, ("%i\t%i\t%i\t%.4f" % (i, pair['A']['mid'], pair['B']['mid'], score))
-        ART.close()
-        yield (a_seqid, b_seqid, filename, num2pair, these_matches)
+        # TODO: redundant return values and dict. but need to keep them ordered.
+        # TODO: make filename a param if needed. (or just wirte to file if debug is on)
+        yield a_seqid, b_seqid, "-", these_matches
 
-        os.unlink(filename)
 
-def run_dag_chainer(a_seqid, b_seqid, filename, num2pair, matches, reverse, options,
+def run_dag_chainer(a_seqid, b_seqid, filename, matches, reverse, options,
                    dagchainer=os.path.join(os.path.abspath(os.path.dirname(__file__)), "dagchainer")):
     """
     calls dagchainer and yields groups of matches
@@ -94,10 +86,16 @@ def run_dag_chainer(a_seqid, b_seqid, filename, num2pair, matches, reverse, opti
           "%(min_score)s -D %(max_dist)s  -F %(filename)s %(reverse)s" # > %(tmp_file)s";
     cmd = cmd % dict(gap_length=o.gap_dist, gap_init=o.gap_init, 
                      gap_extend=o.gap_extend, min_score=o.min_score, 
-                     max_dist=o.gap_max, filename=filename, reverse=reverse,
+                     max_dist=o.gap_max, filename="-", reverse=reverse,
                     dagchainer=dagchainer)
-    print >>sys.stderr, cmd
-    process = Popen(cmd, stdout=PIPE, shell=True)
+    #print >>sys.stderr, cmd
+    num2pair = matches.values()
+    
+    process = Popen(cmd, stdin=PIPE, stdout=PIPE, shell=True)
+    for i, pair in enumerate(num2pair):
+        print >>process.stdin, "%i\t%i\t%i\t%.4f"% (i, pair['A']['mid'], pair['B']['mid'], scoringF(pair['evalue']))
+    process.stdin.close()
+
     header = None
     data = []
     for line in process.stdout:
@@ -173,9 +171,9 @@ a_seqid<tab>a_accn<tab>a_start<tab>a_end<tab>b_seqid<tab>b_accn<tab>b_start<tab>
 
     all_matches = parse_file(opts.dag, opts.evalue)
     for match_info in gen_matches_by_seqid(all_matches):
-        a_seqid, b_seqid, filename, num2pair, matches = match_info
+        a_seqid, b_seqid, filename, matches = match_info
         #TODO: forward and reverse.
-        for header, group in run_dag_chainer(a_seqid, b_seqid, filename, num2pair, matches, "", opts):
+        for header, group in run_dag_chainer(a_seqid, b_seqid, filename, matches, "", opts):
             print_alignment(header, group, opts)
-        for header, group in run_dag_chainer(a_seqid, b_seqid, filename, num2pair, matches, "-r", opts):
+        for header, group in run_dag_chainer(a_seqid, b_seqid, filename, matches, "-r", opts):
             print_alignment("(reverse) " + header, group, opts)
