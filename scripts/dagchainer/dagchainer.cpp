@@ -144,6 +144,7 @@ int  main (int argc, char* argv[])  {
   n = 0;
   while  (fscanf (fp, "%d %d %d %f", &s.pairID, &s.x, &s.y, &s.score) == 4) {
     if  (s.y  > Max_Y){ Max_Y = s.y; }
+    //fprintf(stderr, "%d %d %d %f\n", s.pairID, s.x, s.y, s.score);
     score.push_back(s); //copy match to score list.
   }
   n = score.size();
@@ -312,6 +313,12 @@ FILE *  File_Open
 //  source file  src_fname  at line  line_num .
 
   {
+   if(!strcmp(fname, "-")){
+       return stdin;
+   }
+   else {
+       fprintf(stderr, "fname:%s", fname);
+   }
    FILE  *  fp;
 
    fp = fopen (fname, mode);
