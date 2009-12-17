@@ -5,7 +5,6 @@ import math
 from subprocess import Popen, PIPE
 import os
 
-
 def scoringF(evalue, constant_match=CONSTANT_MATCH_SCORE, max_match=MAX_MATCH_SCORE):
     if not constant_match is None:
         return constant_match
@@ -49,7 +48,8 @@ def get_meta_gene(fh, header=[None]):
     line = fh.readline()
     genes = []
     while line and line[0] != "#": 
-        genes.append(read_dag_line(line))
+        d = read_dag_line(line)
+        genes.append(d)
         line = fh.readline()
     if len(genes) == 0: return None
     l = header[0]
@@ -75,12 +75,6 @@ def get_meta_gene(fh, header=[None]):
             'a_end': a_end, 
             'b_end': b_end, 
             'evalue': 1e-250}
-    """
-    print "%s\t%s\t%d\t%d\t%s\t%s\t%d\t%d\t%e" % \
-            (d['a_seqid'], d['a_accn'], d['a_start'], d['a_end'],
-             d['b_seqid'], d['b_accn'], d['b_start'], d['b_end'],
-             d['evalue'])
-    """
     return d
     
 
@@ -137,11 +131,13 @@ def parse_file(dag_file, evalue_cutoff, metagene=False):
 
     return matches
 
+# TODO: do a filter on the final output by count of repeats and % of a dag group that
+# is made up of repeats.
+
 def gen_matches_by_seqid(matches):
     for a_seqid, b_seqid in sorted(matches):
         these_matches = matches[(a_seqid, b_seqid)]
-        # TODO: redundant return values and dict. but need to keep them ordered.
-        # TODO: make filename a param if needed. (or just wirte to file if debug is on)
+        # TODO: make filename ('-') a param if needed. (or just wirte to file if debug is on)
         yield a_seqid, b_seqid, "-", these_matches
 
 
@@ -151,7 +147,6 @@ def run_dag_chainer(a_seqid, b_seqid, filename, matches, reverse, options,
     calls dagchainer and yields groups of matches
     """
     o = options
-
     cmd = "%(dagchainer)s -G %(gap_length)s -O %(gap_init)s -E %(gap_extend)s -S " +\
           "%(min_score)s -D %(max_dist)s  -F %(filename)s %(reverse)s" # > %(tmp_file)s";
     cmd = cmd % dict(gap_length=o.gap_dist, gap_init=o.gap_init, 
