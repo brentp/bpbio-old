@@ -4,6 +4,11 @@ MAX_MATCH_SCORE=50.0
 import math
 from subprocess import Popen, PIPE
 import os
+op = os.path
+PATH = op.dirname(op.abspath(__file__))
+import sys
+sys.path.insert(0, PATH)
+from dagtools import DagLine
 
 def scoringF(evalue, constant_match=CONSTANT_MATCH_SCORE, max_match=MAX_MATCH_SCORE):
     if not constant_match is None:
@@ -13,27 +18,13 @@ def scoringF(evalue, constant_match=CONSTANT_MATCH_SCORE, max_match=MAX_MATCH_SC
     matchScore = int(matchScore +.5) / 10
     return max_match if matchScore > max_match else matchScore
 
-def read_dag_line(line, dag_cols = ('a_seqid', 'a_accn', 'a_start', 'a_end',\
-                                    'b_seqid', 'b_accn', 'b_start', 'b_end',\
-                                    'evalue')):
-    tline = line[:-1].split("\t")
-    tline = line[:-1].split("\t")
-
-    tline[2:4] = map(int, tline[2:4])
-    tline[6:8] = map(int, tline[6:8])
-    # so if it doesnt have an evalue or it's empty,
-    # just assume the best score.
-    if len(tline) < 8: tline.append(1e-250)
-    elif not tline[8]: tline[8] = 1e-250
-    else: tline[8] = max(float(tline[8]), 1e-250)
-    return dict(zip(dag_cols, tline))
 
 def get_dag_line(fh):
     line = fh.readline()
     while line and line[0] == '#':
         line = fh.readline()
     if not line: return None
-    return read_dag_line(line)
+    return DagLine(line)
 
 def get_name(header):
     # (reverse) Alignment #11  => 11r
@@ -48,7 +39,7 @@ def get_meta_gene(fh, header=[None]):
     line = fh.readline()
     genes = []
     while line and line[0] != "#": 
-        d = read_dag_line(line)
+        d = DagLine(line)
         genes.append(d)
         line = fh.readline()
     if len(genes) == 0: return None
@@ -59,23 +50,23 @@ def get_meta_gene(fh, header=[None]):
 
     reverse = name.endswith('r')
 
-    a_start = min(g['a_start'] for g in genes)
-    a_end   = max(g['a_end'] for g in genes)
+    a_start = min(g.a_start for g in genes)
+    a_end   = max(g.a_end for g in genes)
 
-    b_start = min(g['b_start'] for g in genes)
-    b_end   = max(g['b_end'] for g in genes)
+    b_start = min(g.b_start for g in genes)
+    b_end   = max(g.b_end for g in genes)
     if reverse: b_start, b_end = b_end, b_start
 
-    d = { 'a_seqid': genes[0]['a_seqid'],
-            'b_seqid': genes[0]['b_seqid'],
-            'a_accn': 'a' + name,
-            'b_accn': 'b' + name,
-            'a_start': a_start, 
-            'b_start': b_start, 
-            'a_end': a_end, 
-            'b_end': b_end, 
-            'evalue': 1e-250}
-    return d
+    d = {'a_seqid': genes[0].a_seqid,
+         'b_seqid': genes[0].b_seqid,
+         'a_accn': 'a' + name,
+         'b_accn': 'b' + name,
+         'a_start': a_start, 
+         'b_start': b_start, 
+         'a_end': a_end, 
+         'b_end': b_end, 
+         'evalue': 1e-250}
+    return DagLine.from_dict(d)
     
 
 def parse_file(dag_file, evalue_cutoff, metagene=False):
@@ -93,28 +84,28 @@ def parse_file(dag_file, evalue_cutoff, metagene=False):
             dag = get_dag_line(fh)
             if dag is None: break
 
-        if dag['evalue'] >= evalue_cutoff: continue
-        if dag['a_accn'] == dag['b_accn']: continue
+        if dag.evalue >= evalue_cutoff: continue
+        if dag.a_accn == dag.b_accn: continue
         
-        if not dag['a_accn'] in accn_info:
-            mid = int((dag['a_start'] + dag['a_end'] + 0.5) / 2)
-            a_feat = {'accn': dag['a_accn'], 'start': dag['a_start'], 'end': dag['a_end'], 'mid': mid, 'seqid': dag['a_seqid']}
-            accn_info[dag['a_accn']] = a_feat
+        if not dag.a_accn in accn_info:
+            mid = int((dag.a_start + dag.a_end + 0.5) / 2)
+            a_feat = {'accn': dag.a_accn, 'start': dag.a_start, 'end': dag.a_end, 'mid': mid, 'seqid': dag.a_seqid}
+            accn_info[dag.a_accn] = a_feat
         else:
-            a_feat = accn_info[dag['a_accn']]
+            a_feat = accn_info[dag.a_accn]
 
-        if not dag['b_accn'] in accn_info:
-            mid = int((dag['b_start'] + dag['b_end'] + 0.5) / 2)
-            b_feat = {'accn': dag['b_accn'], 'start': dag['b_start'], 'end': dag['b_end'], 'mid': mid, 'seqid': dag['b_seqid']}
-            accn_info[dag['b_accn']] = b_feat
+        if not dag.b_accn in accn_info:
+            mid = int((dag.b_start + dag.b_end + 0.5) / 2)
+            b_feat = {'accn': dag.b_accn, 'start': dag.b_start, 'end': dag.b_end, 'mid': mid, 'seqid': dag.b_seqid}
+            accn_info[dag.b_accn] = b_feat
         else:
-            b_feat = accn_info[dag['b_accn']]
+            b_feat = accn_info[dag.b_accn]
     
         # always sort by seqid and order. 
-        if dag['a_seqid'] > dag['b_seqid']:
+        if dag.a_seqid > dag.b_seqid:
             a_feat, b_feat = b_feat, a_feat
 
-        elif dag['a_seqid'] == dag['b_seqid'] and a_feat['mid'] > b_feat['mid']:
+        elif dag.a_seqid == dag.b_seqid and a_feat['mid'] > b_feat['mid']:
             a_feat, b_feat = b_feat, a_feat
 
 
@@ -122,26 +113,24 @@ def parse_file(dag_file, evalue_cutoff, metagene=False):
         if not seqid_key in matches: matches[seqid_key] = {}
         these_matches = matches[seqid_key]
 
-        accn_key = tuple(sorted([a_feat['accn'], b_feat['accn']]))
+        if a_feat['accn'] < b_feat['accn']:
+            accn_key = a_feat['accn'], b_feat['accn']
+        else:
+            accn_key = b_feat['accn'], a_feat['accn']
 
         if accn_key in these_matches:
-            if dag['evalue'] < these_matches[accn_key]['evalue']: these_matches[accn_key]['evalue'] = dag['evalue']
+            if dag.evalue < these_matches[accn_key]['evalue']: these_matches[accn_key]['evalue'] = dag.evalue
         else:
-            these_matches[accn_key] = {'A': a_feat, 'B': b_feat, 'evalue': dag['evalue']}
+            these_matches[accn_key] = {'A': a_feat, 'B': b_feat, 'evalue': dag.evalue}
 
     return matches
 
 # TODO: do a filter on the final output by count of repeats and % of a dag group that
 # is made up of repeats.
 
-def gen_matches_by_seqid(matches):
-    for a_seqid, b_seqid in sorted(matches):
-        these_matches = matches[(a_seqid, b_seqid)]
-        # TODO: make filename ('-') a param if needed. (or just wirte to file if debug is on)
-        yield a_seqid, b_seqid, "-", these_matches
-
 
 def run_dag_chainer(a_seqid, b_seqid, filename, matches, reverse, options,
+                    child_conn,
                    dagchainer=os.path.join(os.path.abspath(os.path.dirname(__file__)), "dagchainer")):
     """
     calls dagchainer and yields groups of matches
@@ -153,15 +142,15 @@ def run_dag_chainer(a_seqid, b_seqid, filename, matches, reverse, options,
                      gap_extend=o.gap_extend, min_score=o.min_score, 
                      max_dist=o.gap_max, filename="-", reverse=reverse,
                     dagchainer=dagchainer)
-    #print >>sys.stderr, cmd
     num2pair = matches.values()
-    
-    process = Popen(cmd, stdin=PIPE, stdout=PIPE, shell=True)
+    process = Popen(cmd, stdin=PIPE, stdout=PIPE, bufsize=8*4096, shell=True)
+    write = process.stdin.write
     for i, pair in enumerate(num2pair):
-        print >>process.stdin, "%i\t%i\t%i\t%.4f"% (i, pair['A']['mid'], pair['B']['mid'], scoringF(pair['evalue']))
+        write("%i\t%i\t%i\t%.4f\n" % (i, pair['A']['mid'], pair['B']['mid'], scoringF(pair['evalue'])))
     process.stdin.close()
 
     header = None
+    all_data = [] # added instead of yield to allow parallelization.
     data = []
     for line in process.stdout:
         if line[0] == ">":
@@ -169,7 +158,8 @@ def run_dag_chainer(a_seqid, b_seqid, filename, matches, reverse, options,
                 header = line[1:].strip()
             else:
                 if len(data) >= o.min_aligned_pairs:
-                    yield header, data
+                    #yield header, data
+                    all_data.append((header, data))
                 header = line[1:].strip()
                 data = []
             continue
@@ -179,8 +169,11 @@ def run_dag_chainer(a_seqid, b_seqid, filename, matches, reverse, options,
         data.append({'pair': pair, 'dag_score': float(dag_chain_score)})
 
     if len(data) >= o.min_aligned_pairs:
-        yield header, data
-
+        #yield header, data
+        all_data.append((header, data))
+    child_conn.send(all_data)
+    child_conn.close()
+    
 def print_alignment(header, group, opts):
     header_fmt = "## alignment %s vs. %s %s (num aligned pairs: %i)"
 
@@ -239,12 +232,26 @@ a_seqid<tab>a_accn<tab>a_start<tab>a_end<tab>b_seqid<tab>b_accn<tab>b_start<tab>
 
     if opts.min_score is None:
         opts.min_score = int(opts.min_aligned_pairs * 0.5 * opts.max_match_score)
-    all_matches = parse_file(opts.dag, opts.evalue, opts.meta_genes)
-    
-    for match_info in gen_matches_by_seqid(all_matches):
-        a_seqid, b_seqid, filename, matches = match_info
 
-        for header, group in run_dag_chainer(a_seqid, b_seqid, filename, matches, "", opts):
+    all_matches = parse_file(opts.dag, opts.evalue, opts.meta_genes)
+
+    from multiprocessing import Process, Pipe as mPipe
+    
+    filename = "-"
+    for (a_seqid, b_seqid), matches in sorted(all_matches.iteritems()):
+
+        parent_connf, child_connf = mPipe()
+        pf = Process(target=run_dag_chainer, args=(a_seqid, b_seqid, filename, matches, "", opts, child_connf))
+        pf.start()
+
+        parent_connr, child_connr = mPipe()
+        pr = Process(target=run_dag_chainer, args=(a_seqid, b_seqid, filename, matches, "-r", opts, child_connr))
+        pr.start()
+
+        for header, group in parent_connf.recv():
             print_alignment(header, group, opts)
-        for header, group in run_dag_chainer(a_seqid, b_seqid, filename, matches, "-r", opts):
+        for header, group in parent_connr.recv():
             print_alignment("(reverse) " + header, group, opts)
+
+        pr.join()
+        pf.join()
