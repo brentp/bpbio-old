@@ -12,7 +12,7 @@ import numexpr
 import sys, os
 
 def cache_clear(cache, node, qchr, schr):
-    """ keep some of the arrays in memory
+    """ keep some of the (hdf5) arrays in memory
     if there are too many, put one back into
     the h5 file
     """
@@ -24,7 +24,7 @@ def cache_clear(cache, node, qchr, schr):
 
 def update_cache(achr, node, clen, h5, cache):
     """
-    put a new array in memory, and make sure it's
+    put a new (hdf5) array in memory, and make sure it's
     in the h5 as well
     """
     if not 'c' + achr in node:
@@ -84,8 +84,10 @@ def count_freq(blast_file, fasta, org):
             update_cache(schr, node, len(f[schr]), h5, cache)
             cache_clear(cache, node, qchr, schr)
 
-        cache[qchr][qstart - 1: qstop - 1] += 1
-        cache[schr][sstart - 1: sstop - 1] += 1
+        # convert to 0-based indexes:
+        # 1 8 => 0 8, but range doesnt include upper boud.
+        cache[qchr][qstart - 1: qstop] += 1
+        cache[schr][sstart - 1: sstop] += 1
 
     for achr in cache:
         getattr(node, 'c' + achr)[:] = cache[achr]
@@ -117,7 +119,10 @@ def mask(fasta_file, org, cutoff, mask_value='X'):
 
 
         if not 'c' + seqid in node:
-            print >>sys.stderr, seqid, '! not found in masked, writing unchanged'
+            print >>sys.stderr, seqid,\
+                '! not found in masked, writing unchanged\n' \
+                '  this means that no section of this sequence appeared\n' \
+                '  more than %i times' % cutoff
             out.write('>' + seqid + '\n')
             out.write(seq.tostring() + '\n')
             continue
