@@ -8,9 +8,14 @@ CCFLAGS=-O3 -s -fomit-frame-pointer -Wno-deprecated
 all: 
 	g++ -o ${PROG} dagchainer.cpp ${CCFLAGS}
 
-python:
-	cython cdagline.pyx && \
-		gcc -pthread -fno-strict-aliasing -DNDEBUG -g -fwrapv -O2 -Wall -Wstrict-prototypes -fPIC -I${PYTHON_INCLUDE} -c cdagline.c -o cdagline.o && \
-		gcc -pthread -shared -Wl,-O2 -Wl,-Bsymbolic-functions cdagline.o -o cdagline.so && \
+python: 
+	cd dagtools && cython cdagline.pyx && \
+		CFLAGS=-O3 python setup.py build_ext -i && \
+		rm -rf build/
+
+pythongcc:
+	cd dagtools && cython cdagline.pyx && \
+		gcc -pthread -fno-strict-aliasing -DNDEBUG -g -fwrapv -O3 -Wall -Wstrict-prototypes -fPIC -I${PYTHON_INCLUDE} -c cdagline.c -o cdagline.o && \
+		gcc -pthread -shared -Wl,-O3 -Wl,-Bsymbolic-functions cdagline.o -o cdagline.so && \
 		rm cdagline.o && rm cdagline.c 
 

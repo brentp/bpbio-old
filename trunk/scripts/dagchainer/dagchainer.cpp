@@ -9,8 +9,8 @@
 
 #include  <stdio.h>
 #include  <stdlib.h>
-#include  <iostream>
-#include  <iomanip>
+//#include  <iostream>
+//#include  <iomanip>
 #include  <fstream>
 #include  <math.h>
 #include  <string.h>
@@ -124,6 +124,10 @@ void process_arguments (int, char*[]);
 
 
 int  main (int argc, char* argv[])  {
+#ifdef TIMEIT
+  clock_t start_time, end_time;
+  start_time = clock();
+#endif
 
   FILE* fp;
   Score_t  s;
@@ -138,11 +142,13 @@ int  main (int argc, char* argv[])  {
   process_arguments (argc, argv);
 
   vector<Score_t>  score; //list holds all inputted matches.
+  score.reserve(20000);
 
   // reading in coordinate file, add each match to a list.
   fp = File_Open (filename, "r");
   n = 0;
-  while  (fscanf (fp, "%d %d %d %f", &s.pairID, &s.x, &s.y, &s.score) == 4) {
+  //while  (cin >> s.pairID >> s.x >> s.y >> s.score )
+  while  (fscanf (fp, "%d %d %d %f\n", &s.pairID, &s.x, &s.y, &s.score) == 4) {
     if  (s.y  > Max_Y){ Max_Y = s.y; }
     //fprintf(stderr, "%d %d %d %f\n", s.pairID, s.x, s.y, s.score);
     score.push_back(s); //copy match to score list.
@@ -179,7 +185,10 @@ int  main (int argc, char* argv[])  {
   score.resize (j);
     
   Print_Chains (score);
-       
+#ifdef TIMEIT
+  end_time = clock();
+  fprintf(stderr, "%.3f\n", (double)(end_time - start_time)/(double)CLOCKS_PER_SEC);
+#endif
   return  0;
 }
 
@@ -193,6 +202,12 @@ static void  Print_Chains (vector<Score_t> & score) {
   vector <float>  path_score;
   vector <int>  from, ans;
   vector <Path_t>  high;
+
+  path_score.reserve(20000);
+  from.reserve(20000);
+  ans.reserve(8000);
+  high.reserve(20000);
+
   Path_t  p;
   bool  done;
   int  ali_ct = 0;
@@ -209,27 +224,28 @@ static void  Print_Chains (vector<Score_t> & score) {
     }
     
 
+	int  del_x, del_y, num_gaps;
+    double x;
     for (j = 1; j < n; j++) {
       for (i=j-1; i >= 0; i--) {
 	
-	int  del_x, del_y;
 	
 	del_x = score[j].x - score[i].x - 1;
 	del_y = score[j].y - score [i].y - 1;
 	
-	if  (del_x >= 0 && del_y >= 0)  {
-
+	if  (del_y >= 0 && del_x >= 0)  {
+        
 	  if (del_x > MAX_DIST_BETWEEN_MATCHES && del_y > MAX_DIST_BETWEEN_MATCHES) {
 	    break;
-	  }
+	  } 
 	  if (del_x > MAX_DIST_BETWEEN_MATCHES || del_y > MAX_DIST_BETWEEN_MATCHES) {
 	    continue;
 	  }
 
 	  	  
-	  int num_gaps = (int) ( ((del_x + del_y)+ abs(del_x-del_y)) / (2 * BP_GAP_SIZE)  + 0.5);
+	  num_gaps = (int) ( ((del_x + del_y)+ abs(del_x-del_y)) / (2 * BP_GAP_SIZE)  + 0.5);
 	  
-	  double  x = path_score[i] + score[j].score;
+	  x = path_score[i] + score[j].score;
 	  
 	  if (num_gaps > 0) {
 	    // Affine gap penalty:
