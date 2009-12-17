@@ -22,10 +22,12 @@ def read_dag_line(line, dag_cols = ('a_seqid', 'a_accn', 'a_start', 'a_end',\
 
     tline[2:4] = map(int, tline[2:4])
     tline[6:8] = map(int, tline[6:8])
-    if len(tline) > 8:
-        tline[8] = max(float(tline[8]), 1e-250)
-        return dict(zip(dag_cols, tline))
-    return dict(zip(dag_cols[:8], tline))
+    # so if it doesnt have an evalue or it's empty,
+    # just assume the best score.
+    if len(tline) < 8: tline.append(1e-250)
+    elif not tline[8]: tline[8] = 1e-250
+    else: tline[8] = max(float(tline[8]), 1e-250)
+    return dict(zip(dag_cols, tline))
 
 def get_dag_line(fh):
     line = fh.readline()
@@ -34,21 +36,65 @@ def get_dag_line(fh):
     if not line: return None
     return read_dag_line(line)
 
+def get_name(header):
+    # (reverse) Alignment #11  => 11r
+    a = header.split('Alignment #')[1].split()[0]
+    num_genes = int(header.split()[-1].rstrip(')'))
+    return a + ('.%i' % num_genes) +  ('.r' if 'reverse' in header else '.f')
+
+
 def get_meta_gene(fh, header=[None]):
     if header[0] is None:
         header[0] = fh.readline()
-    while True: pass
+    line = fh.readline()
+    genes = []
+    while line and line[0] != "#": 
+        genes.append(read_dag_line(line))
+        line = fh.readline()
+    if len(genes) == 0: return None
+    l = header[0]
+    name = get_name(header[0])
+    # save the next header.
+    header[0] = line
 
+    reverse = name.endswith('r')
+
+    a_start = min(g['a_start'] for g in genes)
+    a_end   = max(g['a_end'] for g in genes)
+
+    b_start = min(g['b_start'] for g in genes)
+    b_end   = max(g['b_end'] for g in genes)
+    if reverse: b_start, b_end = b_end, b_start
+
+    d = { 'a_seqid': genes[0]['a_seqid'],
+            'b_seqid': genes[0]['b_seqid'],
+            'a_accn': 'a' + name,
+            'b_accn': 'b' + name,
+            'a_start': a_start, 
+            'b_start': b_start, 
+            'a_end': a_end, 
+            'b_end': b_end, 
+            'evalue': 1e-250}
+    """
+    print "%s\t%s\t%d\t%d\t%s\t%s\t%d\t%d\t%e" % \
+            (d['a_seqid'], d['a_accn'], d['a_start'], d['a_end'],
+             d['b_seqid'], d['b_accn'], d['b_start'], d['b_end'],
+             d['evalue'])
+    """
+    return d
+    
 
 def parse_file(dag_file, evalue_cutoff, metagene=False):
 
     accn_info = {}
     matches = {}
     fh = open(dag_file)
-    line = True
-    while line:
+    dag = True
+    while dag:
         if metagene:
             dag = get_meta_gene(fh)
+            if dag is None: break
+
         else:
             dag = get_dag_line(fh)
             if dag is None: break
@@ -154,11 +200,6 @@ def print_alignment(header, group, opts):
                      B['seqid'], B['accn'], B['start'], B['end'],
                      pair_dict['pair']['evalue'], pair_dict['dag_score'])
 
-def make_meta_genes(dag_file):
-    """ this merges genes in the same dag into a single meta
-    gene with start/stops equal to the extents of the region."""
-    pass
-
 if __name__ == "__main__":
     import optparse, sys
     p = optparse.OptionParser()
@@ -201,15 +242,10 @@ a_seqid<tab>a_accn<tab>a_start<tab>a_end<tab>b_seqid<tab>b_accn<tab>b_start<tab>
     if not opts.dag:
         sys.exit(p.print_help())
 
-    if opts.meta_genes:
-        # we write a new .dag file containing the
-        # meta_genes.
-        opts.dag = make_meta_genes(opts.dag)
-
     if opts.min_score is None:
         opts.min_score = int(opts.min_aligned_pairs * 0.5 * opts.max_match_score)
-
-    all_matches = parse_file(opts.dag, opts.evalue)
+    all_matches = parse_file(opts.dag, opts.evalue, opts.meta_genes)
+    
     for match_info in gen_matches_by_seqid(all_matches):
         a_seqid, b_seqid, filename, matches = match_info
 
