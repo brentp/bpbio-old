@@ -20,12 +20,12 @@ cdef class DagLine:
     cdef public char *a_accn, *a_seqid, *b_accn, *b_seqid
 
     def __init__(self, char *sline=NULL):
-        cdef char a_accn[MAXSIZE]
-        cdef char b_accn[MAXSIZE]
+        if sline == NULL: return
+        cdef char a_accn[MAXSIZE * 4]
+        cdef char b_accn[MAXSIZE * 4]
         cdef char a_seqid[MAXSIZE]
         cdef char b_seqid[MAXSIZE]
 
-        if sline == NULL: return
         sscanf(sline, dag_format_line, 
                a_seqid, a_accn, &self.a_start, &self.a_end,
                b_seqid, b_accn, &self.b_start, &self.b_end,
