@@ -18,13 +18,13 @@ except ImportError:
             self.b_start, self.b_end = map(int, tline[6:8])
             # so if it doesnt have an evalue or it's empty,
             # just assume the best score.
-            if len(tline) < 8 or not tline[8]: self.evalue = 1e-250
+            if len(tline) < 9 or not tline[8]: self.evalue = 1e-250
             else: self.evalue = max(float(tline[8]), 1e-250)
         def __repr__(self):
             return "DagLine('%s', '%s')" % (self.a_accn, self.b_accn)
 
         @classmethod
-        def fromdict(cls, d):
+        def from_dict(cls, d):
             for k in cls.__slots__:
                 setattr(cls, k, d[k])
 
