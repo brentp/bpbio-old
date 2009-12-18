@@ -10,6 +10,11 @@ import sys
 sys.path.insert(0, PATH)
 from dagtools import DagLine
 
+try:
+    from multiprocessing import Process, Pipe as mPipe
+except ImportError:
+    from processing import Process, Pipe as mPipe
+
 def scoringF(evalue, constant_match=CONSTANT_MATCH_SCORE, max_match=MAX_MATCH_SCORE):
     if not constant_match is None:
         return constant_match
@@ -238,7 +243,6 @@ a_seqid<tab>a_accn<tab>a_start<tab>a_end<tab>b_seqid<tab>b_accn<tab>b_start<tab>
 
     all_matches = parse_file(opts.dag, opts.evalue, opts.meta_genes)
 
-    from multiprocessing import Process, Pipe as mPipe
     
     filename = "-"
     for (a_seqid, b_seqid), matches in sorted(all_matches.iteritems()):
