@@ -9,6 +9,7 @@ PATH = op.dirname(op.abspath(__file__))
 import sys
 sys.path.insert(0, PATH)
 from dagtools import DagLine
+import collections
 
 try:
     from multiprocessing import Process, Pipe as mPipe
@@ -74,7 +75,7 @@ def get_meta_gene(fh, header=[None]):
     return DagLine.from_dict(d)
     
 
-def parse_file(dag_file, evalue_cutoff, metagene=False):
+def parse_file(dag_file, evalue_cutoff, metagene=False, counts=None):
 
     accn_info = {}
     matches = {}
@@ -88,9 +89,12 @@ def parse_file(dag_file, evalue_cutoff, metagene=False):
         else:
             dag = get_dag_line(fh)
             if dag is None: break
+            if counts is not None:
+                counts[dag.a_accn] += 1
+                counts[dag.b_accn] += 1
 
-        if dag.evalue >= evalue_cutoff: continue
-        if dag.a_accn == dag.b_accn: continue
+            if dag.evalue >= evalue_cutoff: continue
+            if dag.a_accn == dag.b_accn: continue
         
         if not dag.a_accn in accn_info:
             mid = int((dag.a_start + dag.a_end + 0.5) / 2)
@@ -133,6 +137,13 @@ def parse_file(dag_file, evalue_cutoff, metagene=False):
 # TODO: do a filter on the final output by count of repeats and % of a dag group that
 # is made up of repeats.
 
+def parse_cheader(header):
+    """ dagchainer.cpp sends a header line: ">Alignment #%d  score = %.1f\n" 
+    we just want the 2 numbers.
+    """
+    stuff = header.split()
+    return int(stuff[1][1:]), float(stuff[-1][:-1])
+
 
 def run_dag_chainer(a_seqid, b_seqid, filename, matches, reverse, options,
                     child_conn,
@@ -160,19 +171,17 @@ def run_dag_chainer(a_seqid, b_seqid, filename, matches, reverse, options,
     for line in process.stdout:
         if line[0] == ">":
             if header is None:
-                header = line[1:].strip()
+                header = parse_cheader(line[1:].strip())
             else:
                 if len(data) >= o.min_aligned_pairs:
                     #yield header, data
                     all_data.append((header, data))
-                header = line[1:].strip()
+                header = parse_cheader(line[1:].strip())
                 data = []
             continue
 
         #index, pair_id, pos1, pos2, match_score, dag_chain_score = line.strip().split()
-        #print >>sys.stderr, "line:", line
         pair_id, dag_chain_score = line.rstrip("\n").split(" ")
-        #print >>sys.stderr, "getting stdout", pair_id, dag_chain_score
         pair = num2pair[int(pair_id)]
         data.append({'pair': pair, 'dag_score': float(dag_chain_score)})
 
@@ -182,11 +191,17 @@ def run_dag_chainer(a_seqid, b_seqid, filename, matches, reverse, options,
     child_conn.send(all_data)
     child_conn.close()
     
-def print_alignment(header, group, opts):
-    header_fmt = "## alignment %s vs. %s %s (num aligned pairs: %i)"
+def print_alignment(dir, anum_score, group, opts):
+    # dir is 'f' or 'r'
+    diag_id, score = anum_score
+
+    #header_fmt = "## alignment %s vs. %s %s (num aligned pairs: %i)"
+    # diag_id dagchainer score, a_seqid, b_seqid, dir, npairs
+    header_fmt = "#%i\t%.1f\t%s\t%s\t%s\t%i" 
 
     d = group[0]['pair']
-    print header_fmt % (d['A']['seqid'], d['B']['seqid'], header, len(group))
+    #print header_fmt % (d['A']['seqid'], d['B']['seqid'], header, len(group))
+    print header_fmt % (diag_id, score, d['A']['seqid'], d['B']['seqid'], dir, len(group))
 
     for pair_dict in group:
         A = pair_dict['pair']['A']
@@ -195,6 +210,47 @@ def print_alignment(header, group, opts):
                      A['seqid'], A['accn'], A['start'], A['end'],
                      B['seqid'], B['accn'], B['start'], B['end'],
                      pair_dict['pair']['evalue'], pair_dict['dag_score'])
+
+def iterate_matches(all_matches, opts): 
+    filename = "-"
+    meta_genes = True if opts.meta_genes else None
+    saved_meta = []
+
+    for (a_seqid, b_seqid), matches in sorted(all_matches.iteritems()):
+
+        parent_connf, child_connf = mPipe()
+        pf = Process(target=run_dag_chainer, args=(a_seqid, b_seqid, filename, matches, "", opts, child_connf))
+        pf.start()
+
+        parent_connr, child_connr = mPipe()
+        pr = Process(target=run_dag_chainer, args=(a_seqid, b_seqid, filename, matches, "-r", opts, child_connr))
+        pr.start()
+        # TODO: grab score from header?
+        for anum_score, group in parent_connf.recv():
+            print_alignment('f', anum_score, group, opts)
+            #print_alignment(header, group, opts)
+            saved_meta.append(('f', anum_score, group))
+        for anum_score, group in parent_connr.recv():
+            #print_alignment("(reverse) " + header, group, opts)
+            print_alignment('r', anum_score, group, opts)
+            saved_meta.append(('r', anum_score, group))
+
+        pr.join()
+        pf.join()
+
+    return saved_meta
+
+def merge_meta(meta, opts):
+    """ merge the meta genes with the 
+    original dag data sent in"""
+    # TODO: may need to keep track of the diagonal in parse_file...
+    counts = collections.defaultdict(int)
+    all_matches = parse_file(opts.dag, opts.evalue, counts=counts)
+    # `counts` is keys of accns and values of the # of times they appeared.
+    # 1. remove anything from matches appearing > XXX times in counts.
+    
+    
+
 
 if __name__ == "__main__":
     import optparse, sys
@@ -243,22 +299,8 @@ a_seqid<tab>a_accn<tab>a_start<tab>a_end<tab>b_seqid<tab>b_accn<tab>b_start<tab>
 
     all_matches = parse_file(opts.dag, opts.evalue, opts.meta_genes)
 
-    
-    filename = "-"
-    for (a_seqid, b_seqid), matches in sorted(all_matches.iteritems()):
+    meta = iterate_matches(all_matches, opts)
+    if opts.meta_genes:
+        assert len(meta)
+        merge_meta(meta, opts)
 
-        parent_connf, child_connf = mPipe()
-        pf = Process(target=run_dag_chainer, args=(a_seqid, b_seqid, filename, matches, "", opts, child_connf))
-        pf.start()
-
-        parent_connr, child_connr = mPipe()
-        pr = Process(target=run_dag_chainer, args=(a_seqid, b_seqid, filename, matches, "-r", opts, child_connr))
-        pr.start()
-
-        for header, group in parent_connf.recv():
-            print_alignment(header, group, opts)
-        for header, group in parent_connr.recv():
-            print_alignment("(reverse) " + header, group, opts)
-
-        pr.join()
-        pf.join()
