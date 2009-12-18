@@ -120,7 +120,7 @@ int  Best_g = -1, Best_i, Best_j;
 void process_arguments (int, char*[]);
 
 
-#define TIMEIT 1 
+//#define TIMEIT 1 
 #define SIMPLE_RETURN 1
 
 int  main (int argc, char* argv[])  {
