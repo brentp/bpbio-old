@@ -5,7 +5,9 @@ PYTHON_INCLUDE=/usr/include/python2.6
 #CCFLAGS=-Wno-deprecated
 #CCFLAGS=-O3 -s -fomit-frame-pointer -msse2 -Wno-deprecated
 CCFLAGS=-O3 -s -fomit-frame-pointer -Wno-deprecated
-all: 
+all: python dagchainer
+
+dagchainer: dagchainer.cpp
 	g++ -o ${PROG} dagchainer.cpp ${CCFLAGS}
 
 python: 

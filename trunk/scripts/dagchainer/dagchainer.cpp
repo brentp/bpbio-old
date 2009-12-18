@@ -120,8 +120,8 @@ int  Best_g = -1, Best_i, Best_j;
 void process_arguments (int, char*[]);
 
 
-
-
+#define TIMEIT 1 
+#define SIMPLE_RETURN 1
 
 int  main (int argc, char* argv[])  {
 #ifdef TIMEIT
@@ -297,10 +297,15 @@ static void  Print_Chains (vector<Score_t> & score) {
 	    } else {
 	      printY = score [ans[j]].y;
 	    }
+#ifdef SIMPLE_RETURN
+        //fprintf(stderr, "here from c\n");
+        printf("%d %.1f\n", score[ans[j]].pairID, path_score[ans[j]]);
+#else
 	    printf ("%3d: %d %6d %6d %7.1f %7.1f\n", 
 		    j, score[ans[j]].pairID, score[ans[j]].x,
 		    printY, score[ans[j]].score,
 		    path_score[ans[j]]);
+#endif
 	  }
 	}
       }

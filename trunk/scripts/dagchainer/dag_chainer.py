@@ -164,7 +164,10 @@ def run_dag_chainer(a_seqid, b_seqid, filename, matches, reverse, options,
                 data = []
             continue
 
-        index, pair_id, pos1, pos2, match_score, dag_chain_score = line.strip().split()
+        #index, pair_id, pos1, pos2, match_score, dag_chain_score = line.strip().split()
+        #print >>sys.stderr, "line:", line
+        pair_id, dag_chain_score = line.rstrip("\n").split(" ")
+        #print >>sys.stderr, "getting stdout", pair_id, dag_chain_score
         pair = num2pair[int(pair_id)]
         data.append({'pair': pair, 'dag_score': float(dag_chain_score)})
 
