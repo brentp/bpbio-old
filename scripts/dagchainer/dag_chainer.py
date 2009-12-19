@@ -32,11 +32,18 @@ def get_dag_line(fh):
     if not line: return None
     return DagLine(line)
 
-def get_name(header):
-    # (reverse) Alignment #11  => 11r
-    a = header.split('Alignment #')[1].split()[0]
-    num_genes = int(header.split()[-1].rstrip(')'))
-    return a + ('.%i' % num_genes) +  ('.r' if 'reverse' in header else '.f')
+JS="^"
+def parse_pyheader(header, asstring=False):
+    cols = ('id', 'dagscore', 'a_seqid', 'b_seqid', 'dir', 'ngenes')
+    #1  17397.0 athaliana_1 athaliana_1 f   432
+    if asstring:
+        header = header.replace(JS, "!!")
+    li = header[1:-1].split('\t')
+    if asstring:
+        return JS.join(li)
+    li[0], li[-1] = int(li[0]), int(li[-1])
+    li[1] = float(li[1])
+    return dict(zip(cols, li))
 
 
 def get_meta_gene(fh, header=[None]):
@@ -50,11 +57,12 @@ def get_meta_gene(fh, header=[None]):
         line = fh.readline()
     if len(genes) == 0: return None
     l = header[0]
-    name = get_name(header[0])
+    header_string = parse_pyheader(header[0], asstring=True)
     # save the next header.
     header[0] = line
 
-    reverse = name.endswith('r')
+    # header string is joined with JS
+    reverse = JS + "r" + JS in header_string
 
     a_start = min(g.a_start for g in genes)
     a_end   = max(g.a_end for g in genes)
@@ -65,8 +73,8 @@ def get_meta_gene(fh, header=[None]):
 
     d = {'a_seqid': genes[0].a_seqid,
          'b_seqid': genes[0].b_seqid,
-         'a_accn': 'a' + name,
-         'b_accn': 'b' + name,
+         'a_accn': 'a' + header_string,
+         'b_accn': 'b' + header_string,
          'a_start': a_start, 
          'b_start': b_start, 
          'a_end': a_end, 
@@ -225,7 +233,7 @@ def iterate_matches(all_matches, opts):
         parent_connr, child_connr = mPipe()
         pr = Process(target=run_dag_chainer, args=(a_seqid, b_seqid, filename, matches, "-r", opts, child_connr))
         pr.start()
-        # TODO: grab score from header?
+
         for anum_score, group in parent_connf.recv():
             print_alignment('f', anum_score, group, opts)
             #print_alignment(header, group, opts)

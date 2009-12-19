@@ -28,3 +28,6 @@ except ImportError:
             for k in cls.__slots__:
                 setattr(cls, k, d[k])
 
+        def __str__(self):
+            return "%s\t%s\t%i\t%i\t%s\t%s\t%i\t%i\t%g" \
+                % tuple([getattr(self, a) for a in DagLine.__slots__])

@@ -8,7 +8,7 @@ cdef const_char_star dag_format_line = "%s\t%s\t%i\t%i\t%s\t%s\t%i\t%i\t%lf"
 cdef extern from "stdio.h":
     int sscanf(char* astr, const_char_star format, ...)
 
-DEF MAXSIZE=64
+DEF MAXSIZE=256
 
 cdef class DagLine:
     r"""
@@ -17,35 +17,19 @@ cdef class DagLine:
     """
     cdef public int a_start, a_end, b_start, b_end
     cdef public double evalue
-    cdef public char *a_accn, *a_seqid, *b_accn, *b_seqid
+    cdef public char a_accn[MAXSIZE]
+    cdef public char b_accn[MAXSIZE]
+    cdef public char a_seqid[64]
+    cdef public char b_seqid[64]
 
     def __init__(self, char *sline=NULL):
         if sline == NULL: return
-        cdef char a_accn[MAXSIZE * 4]
-        cdef char b_accn[MAXSIZE * 4]
-        cdef char a_seqid[MAXSIZE]
-        cdef char b_seqid[MAXSIZE]
 
         sscanf(sline, dag_format_line, 
-               a_seqid, a_accn, &self.a_start, &self.a_end,
-               b_seqid, b_accn, &self.b_start, &self.b_end,
+               self.a_seqid, self.a_accn, &self.a_start, &self.a_end,
+               self.b_seqid, self.b_accn, &self.b_start, &self.b_end,
                &self.evalue)
-        self.a_accn = <char *>(stdlib.malloc(sizeof(char *) * stdlib.strlen(a_accn)))
-        self.b_accn = <char *>(stdlib.malloc(sizeof(char *) * stdlib.strlen(b_accn)))
-        self.a_seqid = <char *>(stdlib.malloc(sizeof(char *) * stdlib.strlen(a_seqid)))
-        self.b_seqid = <char *>(stdlib.malloc(sizeof(char *) * stdlib.strlen(b_seqid)))
-        stdlib.strcpy(self.a_accn, a_accn)
-        stdlib.strcpy(self.b_accn, b_accn)
-        stdlib.strcpy(self.a_seqid, a_seqid)
-        stdlib.strcpy(self.b_seqid, b_seqid)
         if self.evalue < 1e-250: self.evalue = 1e-250
-
-
-    def __dealloc__(self):
-        stdlib.free(<void *>self.a_accn)
-        stdlib.free(<void *>self.b_accn)
-        stdlib.free(<void *>self.a_seqid)
-        stdlib.free(<void *>self.b_seqid)
 
     def __repr__(self):
         return ("DagLine('%s', '%s')" % (self.a_accn, self.b_accn))
@@ -54,16 +38,19 @@ cdef class DagLine:
     def from_dict(cls, dict d):
         return _factory(d)
 
+    def __str__(self):
+        attrs = ('a_seqid', 'a_accn', 'a_start', 'a_end', 
+                 'b_seqid', 'b_accn', 'b_start', 'b_end', 
+                 'evalue')
+        return "%s\t%s\t%i\t%i\t%s\t%s\t%i\t%i\t%g" \
+                % tuple([getattr(self, a) for a in attrs])
+
+
 cdef DagLine _factory(dict d):
     cdef DagLine instance = DagLine.__new__(DagLine)
-    instance.a_seqid = <char *>stdlib.malloc(sizeof(char *) * len(d['a_seqid']))
     stdlib.strcpy(instance.a_seqid, d['a_seqid'])
-    instance.b_seqid = <char *>stdlib.malloc(sizeof(char *) * len(d['b_seqid']))
     stdlib.strcpy(instance.b_seqid, d['b_seqid'])
-
-    instance.a_accn = <char *>stdlib.malloc(sizeof(char *) * len(d['a_accn']))
     stdlib.strcpy(instance.a_accn, d['a_accn'])
-    instance.b_accn = <char *>stdlib.malloc(sizeof(char *) * len(d['b_accn']))
     stdlib.strcpy(instance.b_accn, d['b_accn'])
 
     instance.a_start = d['a_start']
