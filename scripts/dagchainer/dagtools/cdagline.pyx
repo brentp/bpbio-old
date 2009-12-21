@@ -34,9 +34,6 @@ cdef class DagLine:
     def __repr__(self):
         return ("DagLine('%s', '%s')" % (self.a_accn, self.b_accn))
 
-    @classmethod
-    def from_dict(cls, dict d):
-        return _factory(d)
 
     def __str__(self):
         attrs = ('a_seqid', 'a_accn', 'a_start', 'a_end', 
@@ -44,6 +41,30 @@ cdef class DagLine:
                  'evalue')
         return "%s\t%s\t%i\t%i\t%s\t%s\t%i\t%i\t%g" \
                 % tuple([getattr(self, a) for a in attrs])
+
+    @classmethod
+    def from_dict(cls, dict d):
+        return _factory(d)
+
+    @classmethod
+    def from_pair_dict(cls, dict d):
+        return _pair_factory(d)
+
+cdef DagLine _pair_factory(dict d):
+    cdef DagLine instance = DagLine.__new__(DagLine)
+    cdef dict da = d['A']
+    cdef dict db = d['B']
+    stdlib.strcpy(instance.a_seqid, da['seqid'])
+    stdlib.strcpy(instance.b_seqid, db['seqid'])
+    stdlib.strcpy(instance.a_accn, da['accn'])
+    stdlib.strcpy(instance.b_accn, db['accn'])
+
+    instance.a_start = da['start']
+    instance.b_start = db['start']
+    instance.a_end = da['end']
+    instance.b_end = db['end']
+    instance.evalue = d['evalue']
+    return instance
 
 
 cdef DagLine _factory(dict d):
