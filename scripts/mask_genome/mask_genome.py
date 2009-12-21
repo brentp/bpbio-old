@@ -137,6 +137,10 @@ def mask(fasta_file, org, cutoff, mask_value='X'):
         out.write(masked_seq + '\n')
 
     out.close()
+    # write out a file .fasta.version containing
+    # the svnversion (if available of this script
+    # that was used to create the file.
+    os.system('svnversion > %s.version' % outfile)
     h5.close()
 
 if __name__ == "__main__":
