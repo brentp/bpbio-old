@@ -87,7 +87,7 @@ def get_meta_gene(fh, header=[None]):
     return DagLine.from_dict(d)
     
 
-def parse_file(dag_file, evalue_cutoff, metagene=False, counts=None):
+def parse_file(dag_file, evalue_cutoff, ignore_dist, metagene=False, counts=None):
 
     accn_info = {}
     matches = {}
@@ -106,7 +106,9 @@ def parse_file(dag_file, evalue_cutoff, metagene=False, counts=None):
                 counts[dag.b_accn] += 1
 
             if dag.evalue >= evalue_cutoff: continue
-            if dag.a_accn == dag.b_accn: continue
+            if dag.a_seqid == dag.b_seqid:
+                if abs(dag.a_start - dag.b_start) < ignore_dist: continue
+                if dag.a_accn == dag.b_accn: continue
         
         if not dag.a_accn in accn_info:
             mid = int((dag.a_start + dag.a_end + 0.5) / 2)
@@ -250,11 +252,11 @@ def iterate_matches(all_matches, opts):
             # run. this is used later to merge the meta with the genes.
             # since the 'A' and 'B' accn are the same (except for the starting
             # letter, just keep 'A'.
-            meta_ids.append(('f', [g['pair']['A']['accn'][1:] for g in group]))
+            meta_ids.append(('f', a_seqid, b_seqid, [g['pair']['A']['accn'][1:] for g in group]))
 
         for dag_num, dag_score, group in parent_connr.recv():
             print_alignment('r', dag_num, dag_score, group, opts)
-            meta_ids.append(('r', [g['pair']['A']['accn'][1:] for g in group]))
+            meta_ids.append(('r', a_seqid, b_seqid, [g['pair']['A']['accn'][1:] for g in group]))
 
         pr.join()
         pf.join()
@@ -274,22 +276,27 @@ def iterate_matches(all_matches, opts):
 def merge_meta(meta, opts, max_count=10):
     """ merge the meta genes with the 
     original dag data sent in"""
+    #cols = ('id', 'dagscore', 'a_seqid', 'b_seqid', 'dir', 'ngenes')
     counts = collections.defaultdict(int)
-    all_matches = parse_file(opts.dag, opts.evalue, counts=counts)
+    all_matches = parse_file(opts.dag, opts.evalue, opts.ignore_dist, counts=counts)
     # `counts` is keys of accns and values of the # of times they appeared.
     # 1. remove anything from matches appearing > XXX times in counts.
     #print >>sys.stderr, str(all_matches)[:1400], "\n"
     #print >>sys.stderr, str(meta)[:400]
     fhmeta = open('metamerged.out', 'w')
     by_diag = matches_by_diag_id(all_matches)
-    for direction, diag_str_list in meta:
+    for i, (direction, a_seqid, b_seqid, diag_str_list) in enumerate(meta):
+        
+        dags = []
         for diag_str in diag_str_list:
-            header = "#" + "\t".join(diag_str.split(JS))
-            print >> fhmeta, header
             for d in by_diag[diag_str]:
                 if counts[d.a_accn] > max_count or counts[d.b_accn] > max_count:
                     continue
-                print >>fhmeta, str(d)
+                dags.append(str(d))  
+        header = "#" + "\t".join([str(i), "100.0", a_seqid, b_seqid, direction,
+                                 str(len(dags))])
+        print >> fhmeta, header
+        print >>fhmeta, "\n".join(dags)
 
 def matches_by_diag_id(matches):
     """ take the structure returned by parse_file and return a dictionary
@@ -326,8 +333,9 @@ a_seqid<tab>a_accn<tab>a_start<tab>a_end<tab>b_seqid<tab>b_accn<tab>b_start<tab>
     p.add_option('-A', dest='min_aligned_pairs', type='int', default=6,
                 help="minimum number of pairs to be considered a diagonal")
 
-    p.add_option('-I', dest='ignore_tandem', default=False, action='store_true',
-                help="ignore tandems in self-self comparisons.")
+    p.add_option('-I', dest='ignore_dist', default=250000, type='int',
+                help="ignore hits on teh same chromosome within this distance"
+                " removes the self-self diagonal")
 
     p.add_option('-M', dest='max_match_score', type='float', default=50,
                 help="maximum score to be assigned to a match")
@@ -347,7 +355,7 @@ a_seqid<tab>a_accn<tab>a_start<tab>a_end<tab>b_seqid<tab>b_accn<tab>b_start<tab>
     if opts.min_score is None:
         opts.min_score = int(opts.min_aligned_pairs * 0.5 * opts.max_match_score)
 
-    all_matches = parse_file(opts.dag, opts.evalue, opts.meta_genes)
+    all_matches = parse_file(opts.dag, opts.evalue, opts.ignore_dist, opts.meta_genes)
 
     meta = iterate_matches(all_matches, opts)
     if opts.meta_genes:
