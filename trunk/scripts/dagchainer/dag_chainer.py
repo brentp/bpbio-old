@@ -27,10 +27,14 @@ def scoringF(evalue, constant_match=CONSTANT_MATCH_SCORE, max_match=MAX_MATCH_SC
 
 def get_dag_line(fh):
     line = fh.readline()
-    while line and line[0] == '#':
-        line = fh.readline()
     if not line: return None
+    if line[0] == "#": 
+        get_dag_line.header = parse_pyheader(line, True)
+        line = fh.readline()
     return DagLine(line)
+# `get_dag_line.header` is sort of a hack to save the last seen header.
+# so we know every dagline that follows belong to this group.
+get_dag_line.header = None
 
 JS="^"
 def parse_pyheader(header, asstring=False):
@@ -139,6 +143,11 @@ def parse_file(dag_file, evalue_cutoff, metagene=False, counts=None):
             if dag.evalue < these_matches[accn_key]['evalue']: these_matches[accn_key]['evalue'] = dag.evalue
         else:
             these_matches[accn_key] = {'A': a_feat, 'B': b_feat, 'evalue': dag.evalue}
+            # if it's running through again to merge meta genes, we want to
+            # know which diagonal each match is from. counts indicates
+            # meta-genes.
+            if counts is not None:
+                 these_matches[accn_key]['diag_str'] = get_dag_line.header
 
     return matches
 
@@ -183,7 +192,8 @@ def run_dag_chainer(a_seqid, b_seqid, filename, matches, reverse, options,
             else:
                 if len(data) >= o.min_aligned_pairs:
                     #yield header, data
-                    all_data.append((header, data))
+                    dag_num, dag_score = header
+                    all_data.append((dag_num, dag_score, data))
                 header = parse_cheader(line[1:].strip())
                 data = []
             continue
@@ -194,14 +204,13 @@ def run_dag_chainer(a_seqid, b_seqid, filename, matches, reverse, options,
         data.append({'pair': pair, 'dag_score': float(dag_chain_score)})
 
     if len(data) >= o.min_aligned_pairs:
-        #yield header, data
-        all_data.append((header, data))
+        dag_num, dag_score = header
+        all_data.append((dag_num, dag_score, data))
     child_conn.send(all_data)
     child_conn.close()
     
-def print_alignment(dir, anum_score, group, opts):
+def print_alignment(dir, diag_num, dag_score, group, opts):
     # dir is 'f' or 'r'
-    diag_id, score = anum_score
 
     #header_fmt = "## alignment %s vs. %s %s (num aligned pairs: %i)"
     # diag_id dagchainer score, a_seqid, b_seqid, dir, npairs
@@ -209,7 +218,7 @@ def print_alignment(dir, anum_score, group, opts):
 
     d = group[0]['pair']
     #print header_fmt % (d['A']['seqid'], d['B']['seqid'], header, len(group))
-    print header_fmt % (diag_id, score, d['A']['seqid'], d['B']['seqid'], dir, len(group))
+    print header_fmt % (diag_num, dag_score, d['A']['seqid'], d['B']['seqid'], dir, len(group))
 
     for pair_dict in group:
         A = pair_dict['pair']['A']
@@ -222,7 +231,7 @@ def print_alignment(dir, anum_score, group, opts):
 def iterate_matches(all_matches, opts): 
     filename = "-"
     meta_genes = True if opts.meta_genes else None
-    saved_meta = []
+    meta_ids = []
 
     for (a_seqid, b_seqid), matches in sorted(all_matches.iteritems()):
 
@@ -234,30 +243,63 @@ def iterate_matches(all_matches, opts):
         pr = Process(target=run_dag_chainer, args=(a_seqid, b_seqid, filename, matches, "-r", opts, child_connr))
         pr.start()
 
-        for anum_score, group in parent_connf.recv():
-            print_alignment('f', anum_score, group, opts)
-            #print_alignment(header, group, opts)
-            saved_meta.append(('f', anum_score, group))
-        for anum_score, group in parent_connr.recv():
-            #print_alignment("(reverse) " + header, group, opts)
-            print_alignment('r', anum_score, group, opts)
-            saved_meta.append(('r', anum_score, group))
+        for dag_num, dag_score, group in parent_connf.recv():
+            print_alignment('f', dag_num, dag_score, group, opts)
+            # for merged meta we just keep the direction and the 'accn' where
+            # the 'accn' is actually just the diag_id for the case of a meta
+            # run. this is used later to merge the meta with the genes.
+            # since the 'A' and 'B' accn are the same (except for the starting
+            # letter, just keep 'A'.
+            meta_ids.append(('f', [g['pair']['A']['accn'][1:] for g in group]))
+
+        for dag_num, dag_score, group in parent_connr.recv():
+            print_alignment('r', dag_num, dag_score, group, opts)
+            meta_ids.append(('r', [g['pair']['A']['accn'][1:] for g in group]))
 
         pr.join()
         pf.join()
 
-    return saved_meta
+    return meta_ids
 
-def merge_meta(meta, opts):
+######################
+## meta diags stuff ##
+######################
+"""
+# all_matches
+{('athaliana_2', 'athaliana_3'): {('AT2G47870', 'AT3G62950'): {'A': {'seqid': 'athaliana_2', 'start': 19610409, 'accn': 'AT2G47870', 'end': 19610720, 'mid': 19610564}, 'evalue': 2.3403500000000001e-09, 'B': {'seqid': 'athaliana_3', 'start': 23277224, 'accn': 'AT3G62950', 'end': 23277909, 'mid': 23277566}, 'diag_str': '1^1945.0^athaliana_2^athaliana_3^f^158'}, ('AT2G40820', 'AT3G56480'): {'A': {'se 
+
+# meta
+[('f', [('a8^252.0^athaliana_1^athaliana_1^f^18', 'b8^252.0^athaliana_1^athaliana_1^f^18'), ('a4^100.0^athaliana_1^athaliana_1^r^5', 'b4^100.0^athaliana_1^athaliana_1^r^5')]), ('f', [('a7^486.0^athaliana_1^athaliana_1^f^43', 'b7^486.0^athaliana_1^athaliana_1^f^43'), ('a1^6750.0^athaliana_1^athaliana_1^f^414', 'b1^6750.0^athaliana_1^athaliana_1^f^414')]), ('f', [('a11^154.0^athaliana_1^athaliana_1^
+"""
+def merge_meta(meta, opts, max_count=10):
     """ merge the meta genes with the 
     original dag data sent in"""
-    # TODO: may need to keep track of the diagonal in parse_file...
     counts = collections.defaultdict(int)
     all_matches = parse_file(opts.dag, opts.evalue, counts=counts)
     # `counts` is keys of accns and values of the # of times they appeared.
     # 1. remove anything from matches appearing > XXX times in counts.
-    
-    
+    #print >>sys.stderr, str(all_matches)[:1400], "\n"
+    #print >>sys.stderr, str(meta)[:400]
+    fhmeta = open('metamerged.out', 'w')
+    by_diag = matches_by_diag_id(all_matches)
+    for direction, diag_str_list in meta:
+        for diag_str in diag_str_list:
+            header = "#" + "\t".join(diag_str.split(JS))
+            print >> fhmeta, header
+            for d in by_diag[diag_str]:
+                if counts[d.a_accn] > max_count or counts[d.b_accn] > max_count:
+                    continue
+                print >>fhmeta, str(d)
+
+def matches_by_diag_id(matches):
+    """ take the structure returned by parse_file and return a dictionary
+    where the keys are the diag_ids and the values are the dag-pair."""
+    by_diag = collections.defaultdict(list)
+    for seqid_pair, accn_pair_dict in matches.iteritems():
+        for accn_pair_key, accn_pair in accn_pair_dict.iteritems():
+            by_diag[accn_pair['diag_str']].append(DagLine.from_pair_dict(accn_pair))
+      
+    return dict(by_diag) 
 
 
 if __name__ == "__main__":
