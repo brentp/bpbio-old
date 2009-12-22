@@ -10,6 +10,7 @@ def main(args):
     p = optparse.OptionParser("plot a dagfile")
     p.add_option('-q', '--qseqid', dest='qseqid', help="seqid of the query")
     p.add_option('-s', '--sseqid', dest='sseqid', help="seqid of the subject")
+    p.add_option('-p', '--png', dest='png', help="path of png to save file.")
 
     p.add_option('-l', '--lines', dest='lines', help="draw as lines (not dots)",
                  action='store_true')
@@ -18,13 +19,13 @@ def main(args):
     # TODO outfile.
 
     opts, _ = p.parse_args(args)
-    if not (opts.qseqid and opts.sseqid and opts.dag):
+    if not (opts.qseqid and opts.sseqid and opts.dag and opts.png):
         sys.exit(p.print_help())
-    plot(opts.dag, opts.qseqid, opts.sseqid, opts.lines)
+    plot(opts.dag, opts.qseqid, opts.sseqid, opts.png, opts.lines)
 
-def plot(dagfile, qseqid, sseqid, lines=False):
+def plot(dagfile, qseqid, sseqid, png, lines=False):
 
-    matplotlib.use('QtAgg')
+    matplotlib.use('Agg')
 
     from matplotlib import pyplot as plt
     f = plt.figure()
@@ -63,5 +64,10 @@ def plot(dagfile, qseqid, sseqid, lines=False):
 
     ax.set_xlim(0, xmax)
     ax.set_ylim(0, ymax)
-    plt.show()
+    plt.savefig(png)
+    #plt.show()
     plt.close()
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2: sys.argv.append('zzz')
+    main(sys.argv[1:])
