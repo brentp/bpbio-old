@@ -1,15 +1,12 @@
 '''
 find the local duplicates given a tab-delimited blastfile.
 '''
-__revision__ = .15
+__revision__ = .16
 
 import sys
 import collections
-try:
-    import psyco
-    psyco.full()
-except ImportError, e:
-    pass
+try: import psyco; psyco.full()
+except ImportError: pass
 
 def tandems(locs, dupdist=4):
     """ find local dups:
@@ -139,8 +136,27 @@ def get_self_hits(hit_file, order):
 
     return self_hits
 
+def order_from_ordered(dag_file):
+    """
+    given a dag file where the start/stops are
+    relative positions, jsut return a dict of
+    {'accn', idx}
+    """
+    order = {}
+    for line in open(dag_file):
+        line = line.split("\t")
+        order[line[2]] = int(line[3])
+        order[line[5]] = int(line[6])
+    return order
 
-def order_from_hits(hit_file):
+def order_from_hits(hit_file, by_order=False):
+    """
+    if by_order is True, then the start/stop positions
+    are the order, not the basepair positions,
+    so just use that.
+    """
+    if by_order:
+        return order_from_ordered(hit_file)
     
     seen = {}
     list_order = []
@@ -202,12 +218,12 @@ def clean(non_parent_dups, hit_file, is_same=True):
     clean_file.close()
 
 
-def main(dup_dist, hit_file, save_dups=False, clean_file=False):
+def main(dup_dist, hit_file, save_dups=False, clean_file=False, ordered=False):
 
     if save_dups:
         save_dups = open(hit_file + ".dups",'w')
 
-    order = order_from_hits(hit_file)
+    order = order_from_hits(hit_file, ordered)
     self_hits = get_self_hits(hit_file, order)
     invorder = dict((i, a) for a, i in order.iteritems())
 
@@ -237,6 +253,9 @@ if __name__ == "__main__":
     save_dups_help = """if this flag is seen, a new file named HIT_FILE.dups will be created with the full dups data: the parent as the first column and dups as comma-delimited columns continuing to the left e.g.:
                         parent_dupa, dupa1, dupa2\\nparent_dupb, dupb1, dupb2, dupb3\\nparentdupc, dupc1\\n..."""
     clean_help = "if this flag is seen, then a new file will be created by the name of HIT_FILE.nodups that prints out the HITFILE contents excluding any hit that contains a non-parent local dup"
+    order_help = "if this flag is set, the dag file sent in is assumed to contain the\n"\
+                 " relative gene orders in the start/stop position, not the basepair\n"\
+                 " positions as is usually the case."
 
     usage = """
     python %s -d 5 -i /var/blast/rice.hits -s -r > /var/blast/rice_dups.txt
@@ -264,10 +283,11 @@ if __name__ == "__main__":
     parser.add_option("-i", "--hit_file",  dest="hit_file",   help=hit_file_help)
     parser.add_option("-s",                dest="save_dups",  help=save_dups_help, action="store_true")
     parser.add_option("-r",                dest="clean_file", help=clean_help,     action="store_true")
+    parser.add_option("-o",                dest="order", help=order_help,     action="store_true")
 
     
 
     (options, _) = parser.parse_args()
     if not options.hit_file:
         sys.exit(parser.print_help())
-    main(options.dup_dist, options.hit_file, options.save_dups, options.clean_file)
+    main(options.dup_dist, options.hit_file, options.save_dups, options.clean_file, options.order)
