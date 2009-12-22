@@ -12,9 +12,9 @@ from dagtools import DagLine
 import collections
 
 try:
-    from multiprocessing import Process, Pipe as mPipe
-except ImportError:
     from processing import Process, Pipe as mPipe
+except ImportError:
+    from multiprocessing import Process, Pipe as mPipe
 
 def scoringF(evalue, constant_match=CONSTANT_MATCH_SCORE, max_match=MAX_MATCH_SCORE):
     if not constant_match is None:
