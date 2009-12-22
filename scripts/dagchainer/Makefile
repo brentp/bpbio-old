@@ -11,9 +11,9 @@ dagchainer: dagchainer.cpp
 	g++ -o ${PROG} dagchainer.cpp ${CCFLAGS}
 
 python: 
-	cd dagtools && cython cdagline.pyx && \
-		CFLAGS=-O3 python setup.py build_ext -i && \
-		rm -rf build/
+	cython dagtools/cdagline.pyx
+	python setup.py build_ext -i
+	rm -r build
 
 pythongcc:
 	cd dagtools && cython cdagline.pyx && \
