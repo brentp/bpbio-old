@@ -150,6 +150,7 @@ if __name__ == "__main__":
     p.add_option("-f", dest="fasta", help="path to the fasta file (which was\n"
                  "used as query and subject in the blast")
     p.add_option("-o", dest="org", help="name of the organism. e.g. 'rice'")
+    p.add_option("--h5", dest="h5", help="path to the hdf5 file to use.", default=H5)
     p.add_option("-c", dest="cutoff", 
                  help="cutoff value, bp locations appearing in the blast more\n"
                  "than this many times are masked", type='int', default=50)
@@ -167,6 +168,9 @@ if __name__ == "__main__":
             print "make sure blast:%s and fasta:%s exist:" \
                                 % (options.blast, options.fasta)
             sys.exit()
+
+    if options.h5: H5=options.h5
+
     assert len(options.mask) == 1 or options.mask.lower() == 'soft'
     count_freq(options.blast, options.fasta, options.org)
     print "> done counting..."
