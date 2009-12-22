@@ -11,6 +11,7 @@ def main():
             print "\t", c
         print "\ne.g as '%s plot -h' to see the help for a particular command" \
                 % (sys.argv[0])
+        sys.exit()
 
     command = sys.argv[1]
     if command == 'plot':
