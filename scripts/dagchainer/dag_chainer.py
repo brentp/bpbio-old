@@ -289,7 +289,7 @@ def merge_meta(meta, opts, max_count=10):
         
         dags = []
         for diag_str in diag_str_list:
-            for d in by_diag[diag_str]:
+            for d in by_diag.get(diag_str, []):
                 if counts[d.a_accn] > max_count or counts[d.b_accn] > max_count:
                     continue
                 dags.append(str(d))  
