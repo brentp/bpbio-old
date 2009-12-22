@@ -10,6 +10,7 @@ import sys
 sys.path.insert(0, PATH)
 from dagtools import DagLine
 import collections
+import operator
 
 try:
     from processing import Process, Pipe as mPipe
@@ -246,17 +247,25 @@ def iterate_matches(all_matches, opts):
         pr.start()
 
         for dag_num, dag_score, group in parent_connf.recv():
-            print_alignment('f', dag_num, dag_score, group, opts)
-            # for merged meta we just keep the direction and the 'accn' where
-            # the 'accn' is actually just the diag_id for the case of a meta
-            # run. this is used later to merge the meta with the genes.
-            # since the 'A' and 'B' accn are the same (except for the starting
-            # letter, just keep 'A'.
-            meta_ids.append(('f', a_seqid, b_seqid, [g['pair']['A']['accn'][1:] for g in group]))
+            if meta_genes is None:
+                print_alignment('f', dag_num, dag_score, group, opts)
+            else:
+                # for merged meta we just keep the direction and the 'accn' where
+                # the 'accn' is actually just the diag_id for the case of a meta
+                # run. this is used later to merge the meta with the genes.
+                # since the 'A' and 'B' accn are the same (except for the starting
+                # letter, just keep 'A'.
+                meta_ids.append(('f', a_seqid, b_seqid,
+                                 [g['pair']['A']['accn'][1:] for g in group], 
+                                 len(group)))
 
         for dag_num, dag_score, group in parent_connr.recv():
-            print_alignment('r', dag_num, dag_score, group, opts)
-            meta_ids.append(('r', a_seqid, b_seqid, [g['pair']['A']['accn'][1:] for g in group]))
+            if meta_genes is None:
+                print_alignment('r', dag_num, dag_score, group, opts)
+            else:
+                meta_ids.append(('r', a_seqid, b_seqid,
+                                 [g['pair']['A']['accn'][1:] for g in group],
+                                 len(group)))
 
         pr.join()
         pf.join()
@@ -279,24 +288,36 @@ def merge_meta(meta, opts, max_count=10):
     #cols = ('id', 'dagscore', 'a_seqid', 'b_seqid', 'dir', 'ngenes')
     counts = collections.defaultdict(int)
     all_matches = parse_file(opts.dag, opts.evalue, opts.ignore_dist, counts=counts)
-    # `counts` is keys of accns and values of the # of times they appeared.
-    # 1. remove anything from matches appearing > XXX times in counts.
-    #print >>sys.stderr, str(all_matches)[:1400], "\n"
-    #print >>sys.stderr, str(meta)[:400]
-    fhmeta = open('metamerged.out', 'w')
+    fhmeta = sys.stdout
     by_diag = matches_by_diag_id(all_matches)
-    for i, (direction, a_seqid, b_seqid, diag_str_list) in enumerate(meta):
-        
+    # wnat the longest first. then we remove shorter ones that are completely contained
+    # in the larger ones.
+    seen = {}
+    meta.sort(key=operator.itemgetter(4), reverse=True)
+    for i, (direction, a_seqid, b_seqid, diag_str_list, llen) in enumerate(meta):
+        # so here we have a list of meta-diags merged into a single diag... 
         dags = []
+
+        # and we go through and merge them into dags[].
+        # TODO: need to sort this out better. can meta-diags with opposite directions
+        # be merged??? when?
         for diag_str in diag_str_list:
-            for d in by_diag.get(diag_str, []):
-                if counts[d.a_accn] > max_count or counts[d.b_accn] > max_count:
-                    continue
-                dags.append(str(d))  
-        header = "#" + "\t".join([str(i), "100.0", a_seqid, b_seqid, direction,
+            these_dags = []
+            if not diag_str in by_diag: continue
+            for d in by_diag[diag_str]:
+                these_dags.append(d)  
+            unseen_dags = [t for t in these_dags if not (t.a_accn, t.b_accn) in seen]
+            for ud in unseen_dags: seen[(ud.a_accn, ud.b_accn)] = None
+            #if len(these_dags) >= opts.min_aligned_pairs:
+            if len(unseen_dags) >= opts.min_aligned_pairs / 2 \
+               or len(unseen_dags) / float(len(these_dags)) > 0.60:
+                dags.extend((str(ud) for ud in unseen_dags))
+
+        if len(dags) >= opts.min_aligned_pairs:
+            header = "#" + "\t".join([str(i), "100.0", a_seqid, b_seqid, direction,
                                  str(len(dags))])
-        print >> fhmeta, header
-        print >>fhmeta, "\n".join(dags)
+            print >>fhmeta, header
+            print >>fhmeta, "\n".join(dags)
 
 def matches_by_diag_id(matches):
     """ take the structure returned by parse_file and return a dictionary
