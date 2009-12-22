@@ -258,7 +258,7 @@ if __name__ == "__main__":
                  " positions as is usually the case."
 
     usage = """
-    python %s -d 5 -i /var/blast/rice.hits -s -r > /var/blast/rice_dups.txt
+    python %s -d 5 -i rice.hits -s -r > rice_dups.txt
 
     the output to STDOUT is all dups (columns) except the parent (first). 
     this is useful to capture for later filtering of all but the parent duplication which is NOT included in the list
