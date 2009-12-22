@@ -1,6 +1,6 @@
 import collections
 import sys
-from __init__ import DagLine
+from cdagline import DagLine
 
 
 class BlastLine(object):
@@ -66,9 +66,7 @@ def adjust_evalue(afile, expected_count=8, evalue_cutoff=5, oclass=DagLine,
 
         if b.evalue < evalue_cutoff: print >>out, str(b)
 
-
-
-if __name__ == "__main__":
+def main(args):
     import optparse
     p = optparse.OptionParser("""
     adjust the evalues in a dagchainer/blast file by the number of times they occur.
@@ -92,7 +90,7 @@ if __name__ == "__main__":
     p.add_option('-e', dest='evalue', type='float', help="filter (dont print)"
         " lines with a value higher than this", default=5)
 
-    opts, _ = p.parse_args()
+    opts, _ = p.parse_args(args)
     if not opts.afile: sys.exit(p.print_help())
     if not opts.type:
         if opts.afile.endswith(".blast"): opts.type = "blast"
@@ -108,3 +106,8 @@ if __name__ == "__main__":
     else: 
         out = sys.stdout 
     adjust_evalue(opts.afile, opts.expected, opts.evalue, oclass, out)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2: sys.argv.append('zzz')
+    main(sys.argv[1:])

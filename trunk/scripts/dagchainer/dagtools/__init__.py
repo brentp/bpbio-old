@@ -3,7 +3,7 @@ from cdagline import DagLine
 def main():
     import sys
 
-    commands = ('plot', 'from_blast')
+    commands = ('plot', 'from_blast', 'adjust')
     if len(sys.argv) < 2 or not sys.argv[1] in commands:
         print "dagtools\n"
         print "available commands are: " 
@@ -20,6 +20,10 @@ def main():
     elif command == 'from_blast':
         import from_blast
         from_blast.main(sys.argv[2:])
+    elif command == "adjust":
+        import evalue_adjust
+        evalue_adjust.main(sys.argv[2:])
+
 
 if __name__ == "__main__":
     main()
