@@ -2,15 +2,18 @@ import sys
 import gtpym
 import operator
 
-def to_order(gff):
+def to_order(gff, outfile):
     seqids = sorted(gff.seqids)
     order = {}
     i = 0
+    out = open(outfile, 'w')
     for seqid in seqids:
         feats = sorted(gff.get_features_for_seqid(seqid), key=operator.attrgetter('start'))
         for feat in feats:
             order[feat.attribs["ID"]] = i
+            print >>out, feat.attribs["ID"]
             i += 1
+    out.close()
     return order
 
 def blast_to_dag(blast_file, query, subject, qgff_file, sgff_file, qdups,
@@ -27,8 +30,8 @@ def blast_to_dag(blast_file, query, subject, qgff_file, sgff_file, qdups,
     sgff = gtpym.FeatureIndexMemory(sgff_file)
 
     if order:
-        qorder = to_order(qgff)
-        sorder = to_order(sgff)
+        qorder = to_order(qgff, qgff_file + ".order")
+        sorder = to_order(sgff, sgff_file + ".order")
 
     qorg = query   + "_"
     sorg = subject + "_"
