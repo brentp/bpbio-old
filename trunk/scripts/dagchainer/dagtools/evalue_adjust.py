@@ -55,7 +55,8 @@ def adjust_evalue(afile, expected_count=8, evalue_cutoff=5, oclass=DagLine,
 
     expected_count = float(expected_count)
     counts = collections.defaultdict(int)
-    for line in open(afile):
+    fh = sys.stdin if afile == "-" else open(afile)
+    for line in fh:
         b = oclass(line)
         counts[getattr(b, name1)] += 1
         counts[getattr(b, name2)] += 1
