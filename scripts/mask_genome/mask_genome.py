@@ -140,7 +140,8 @@ def mask(fasta_file, org, cutoff, mask_value='X'):
     # write out a file .fasta.version containing
     # the svnversion (if available of this script
     # that was used to create the file.
-    os.system('svnversion > %s.version' % outfile)
+    path = os.path.dirname(__file__)
+    os.system('svnversion %s > %s.version' % (path, outfile))
     h5.close()
 
 if __name__ == "__main__":
