@@ -99,6 +99,7 @@ def blast(_blast_cfg, blastall="/usr/bin/blastall", full_name=False, blast_log=N
     cmd = "%(format_db)s -i %(s_fasta)s -p %(protein)s" % locals()
 
     ext = ".pin" if protein == "T" else ".nin"
+    assert os.path.exists(s_fasta), "%s does not exist!" % s_fasta
     if not is_current_file(s_fasta + ext, s_fasta):
         try:
             sh(cmd)
