@@ -1,5 +1,6 @@
 import collections
 import sys
+import os
 from cdagline import DagLine
 
 
@@ -45,6 +46,7 @@ def adjust_evalue(afile, expected_count=8, evalue_cutoff=5, oclass=DagLine):
 
     yields each dag value after it has been adjusted.
     """
+    assert os.path.exists(afile)
     if oclass is BlastLine:
         name1, name2 = ('query', 'subject')
     else:

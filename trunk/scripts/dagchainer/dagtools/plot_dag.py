@@ -75,7 +75,8 @@ def plot(dagfile, qseqid, sseqid, png, lines=False, ax=None, colored=True):
 
     if not lines:
         pts = np.array(pts, dtype=[('x', int), ('y', int), ('c', 'S1')])
-        ax.scatter(pts['x'], pts['y'], edgecolor='none', c=pts['c'], s=s,
+        if pts.shape[0] > 0:
+            ax.scatter(pts['x'], pts['y'], edgecolor='none', c=pts['c'], s=s,
                   alpha=alpha)
 
     #ax.set_xlim(0, xmax)
