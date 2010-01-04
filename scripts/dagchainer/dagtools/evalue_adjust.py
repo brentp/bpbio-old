@@ -31,9 +31,7 @@ class BlastLine(object):
     def __str__(self):
         return "\t".join(map(str, (getattr(self, attr) for attr in BlastLine.__slots__)))
 
-def adjust_evalue(afile, expected_count=8, evalue_cutoff=5, oclass=DagLine, 
-                  out=sys.stdout
-                 ):
+def adjust_evalue(afile, expected_count=8, evalue_cutoff=5, oclass=DagLine):
     """
     adjust the evalues in a dagchainer/blast file by the number of times they occur.
     query/subjects that appear often will have the evalues raise (made less 
@@ -44,38 +42,43 @@ def adjust_evalue(afile, expected_count=8, evalue_cutoff=5, oclass=DagLine,
                       making the value higher results in less evalue adjustment.    
     `evalue_cutoff`: dont print lines with an adjusted evalue above this
     `oclass`: either DagLine or BlastLine
-    `out`: a filehandle. defaults to stdout. if a string. it's opened.
+
+    yields each dag value after it has been adjusted.
     """
     if oclass is BlastLine:
         name1, name2 = ('query', 'subject')
     else:
         name1, name2 = ('a_accn', 'b_accn')
 
-    if isinstance(out, basestring): out = open(out, 'w')
 
     expected_count = float(expected_count)
-    counts = collections.defaultdict(int)
-    fh = sys.stdin if afile == "-" else open(afile)
+    counts = collections.defaultdict(float)
+    if isinstance(afile, basestring):
+        fh = sys.stdin if afile == "-" else open(afile)
+    elif isinstance(afile, list):
+        fh = afile
+
     for line in fh:
         b = oclass(line)
-        counts[getattr(b, name1)] += 1
-        counts[getattr(b, name2)] += 1
+        counts[getattr(b, name1)] += 1.0
+        counts[getattr(b, name2)] += 1.0
+
     for line in open(afile):
         b = oclass(line)
         count = counts[getattr(b, name1)] + counts[getattr(b, name2)]
         b.evalue = b.evalue ** (expected_count / count)
 
-        if b.evalue < evalue_cutoff: print >>out, str(b)
+        if b.evalue <= evalue_cutoff: yield b
 
 def main(args):
     import optparse
     p = optparse.OptionParser("""
     adjust the evalues in a dagchainer/blast file by the number of times they occur.
     query/subjects that appear often will have the evalues raise (made less 
-    significant).
-    """)
+    significant). useage:
+        python %s some.dag
+    """ % sys.argv[0])
 
-    p.add_option('-f', dest='afile', help="path to a blast or dag file")
     p.add_option('-t', dest='type', help="'blast' or 'dag'.\
        if not specified, the extention the extension of the file is used.",
             default=None)
@@ -91,24 +94,21 @@ def main(args):
     p.add_option('-e', dest='evalue', type='float', help="filter (dont print)"
         " lines with a value higher than this", default=5)
 
-    opts, _ = p.parse_args(args)
-    if not opts.afile: sys.exit(p.print_help())
+    opts, a_file = p.parse_args(args)
+    if not a_file: sys.exit(p.print_help())
+    a_file = a_file[0]
     if not opts.type:
-        if opts.afile.endswith(".blast"): opts.type = "blast"
-        elif ".dag" in opts.afile: opts.type = "dag"
-        else:
-            sys.exit(p.print_help("specify the file type 'blast' or 'dag'"))
-    assert opts.type in ("dag", "blast")
-    if opts.type == "dag": oclass = DagLine
-    else: oclass = BlastLine
+        opts.type = "blast" if a_file.endswith(".blast") else "dag"
+    oclass = DagLine if opts.type == "dag" else BlastLine
 
     if opts.out is not None:
-        out = opts.out
+        out = open(opts.out, "w")
     else: 
         out = sys.stdout 
-    adjust_evalue(opts.afile, opts.expected, opts.evalue, oclass, out)
+
+    for d in adjust_evalue(a_file, opts.expected, opts.evalue, oclass):
+        print >>out, str(d)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2: sys.argv.append('zzz')
     main(sys.argv[1:])
