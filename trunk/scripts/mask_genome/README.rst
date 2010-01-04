@@ -6,7 +6,8 @@ given a full genome self-`blast` and a `fasta` file, create
 a new masked genome where any basepair occuring more than
 `cutoff` times is masked. the new file will be written
 in the same directory as the original fasta with a name like
-"rice.masked.50.fasta"
+"rice.masked.50.fasta" where rice.fasta was the input file
+and 50 the cutoff.
 
 Blast
 =====
@@ -20,13 +21,11 @@ Soft Masking
 by default the genome is 'hard' masked with 'X', that is any repetitive basepair
 is masked with 'X'. it is possible to specify a soft mask with "-m SOFT " on the
 commandline. this will convert each sequence to upper case and then mask repetetive
-values with the lower-case equivalent. later analyses can tell blast to ignore 
-lower cased basepairs using "-U T" to the blastall command.
-
+values with the lower-case equivalent. tools including BLAST can be told to ignore the lower-cased basepairs ("-U T" on the command-line for blastall).
 
 Example
 =======
-an entire mask. start from just the genomic fasta can be run with
+an entire mask. starting from just the genomic fasta can be run with
 ::
 
     ORG=thaliana_v7
@@ -73,3 +72,4 @@ Requirements
  * pytables (easy_install - able)
  * pyfasta (easy_install - able)
  * numexpr (easy_install - able)
+

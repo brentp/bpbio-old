@@ -88,14 +88,14 @@ def get_meta_gene(fh, header=[None]):
     return DagLine.from_dict(d)
     
 
-def parse_file(dag_file, evalue_cutoff, ignore_dist, metagene=False, counts=None):
+def parse_file(dag_file, evalue_cutoff, ignore_dist, merge_genes=False, counts=None):
 
     accn_info = {}
     matches = {}
     fh = open(dag_file)
     dag = True
     while dag:
-        if metagene:
+        if merge_genes:
             dag = get_meta_gene(fh)
             if dag is None: break
 
@@ -212,28 +212,27 @@ def run_dag_chainer(a_seqid, b_seqid, filename, matches, reverse, options,
     child_conn.send(all_data)
     child_conn.close()
     
-def print_alignment(dir, diag_num, dag_score, group, opts):
+def print_alignment(dir, diag_num, dag_score, group, opts, out):
     # dir is 'f' or 'r'
-
-    #header_fmt = "## alignment %s vs. %s %s (num aligned pairs: %i)"
     # diag_id dagchainer score, a_seqid, b_seqid, dir, npairs
     header_fmt = "#%i\t%.1f\t%s\t%s\t%s\t%i" 
 
     d = group[0]['pair']
-    #print header_fmt % (d['A']['seqid'], d['B']['seqid'], header, len(group))
-    print header_fmt % (diag_num, dag_score, d['A']['seqid'], d['B']['seqid'], dir, len(group))
+    print >>out, header_fmt % \
+            (diag_num, dag_score, d['A']['seqid'], 
+             d['B']['seqid'], dir, len(group))
 
     for pair_dict in group:
         A = pair_dict['pair']['A']
         B = pair_dict['pair']['B']
-        print "%s\t%s\t%d\t%d\t%s\t%s\t%d\t%d\t%e\t%d" % (\
+        print >>out, "%s\t%s\t%d\t%d\t%s\t%s\t%d\t%d\t%e\t%d" % (\
                      A['seqid'], A['accn'], A['start'], A['end'],
                      B['seqid'], B['accn'], B['start'], B['end'],
                      pair_dict['pair']['evalue'], pair_dict['dag_score'])
 
-def iterate_matches(all_matches, opts): 
-    filename = "-"
-    meta_genes = True if opts.meta_genes else None
+def iterate_matches(all_matches, opts, save_meta=False, out=sys.stdout): 
+    filename = "-" # tells dagchainer to read from stdin.
+    merge_genes = True if opts.merge else None
     meta_ids = []
 
     for (a_seqid, b_seqid), matches in sorted(all_matches.iteritems()):
@@ -247,8 +246,8 @@ def iterate_matches(all_matches, opts):
         pr.start()
 
         for dag_num, dag_score, group in parent_connf.recv():
-            if meta_genes is None:
-                print_alignment('f', dag_num, dag_score, group, opts)
+            if merge_genes is None:
+                print_alignment('f', dag_num, dag_score, group, opts, out)
             else:
                 # for merged meta we just keep the direction and the 'accn' where
                 # the 'accn' is actually just the diag_id for the case of a meta
@@ -260,8 +259,8 @@ def iterate_matches(all_matches, opts):
                                  len(group)))
 
         for dag_num, dag_score, group in parent_connr.recv():
-            if meta_genes is None:
-                print_alignment('r', dag_num, dag_score, group, opts)
+            if merge_genes is None:
+                print_alignment('r', dag_num, dag_score, group, opts, out)
             else:
                 meta_ids.append(('r', a_seqid, b_seqid,
                                  [g['pair']['A']['accn'][1:] for g in group],
@@ -354,19 +353,24 @@ a_seqid<tab>a_accn<tab>a_start<tab>a_end<tab>b_seqid<tab>b_accn<tab>b_start<tab>
     p.add_option('-A', dest='min_aligned_pairs', type='int', default=6,
                 help="minimum number of pairs to be considered a diagonal")
 
-    p.add_option('-I', dest='ignore_dist', default=250000, type='int',
+    p.add_option('-I', dest='ignore_dist', default=25, type='int',
                 help="ignore hits on teh same chromosome within this distance"
                 " removes the self-self diagonal")
 
     p.add_option('-M', dest='max_match_score', type='float', default=50,
                 help="maximum score to be assigned to a match")
-    p.add_option('--meta_genes', dest='meta_genes', default=False, 
-                 action='store_true', help="""\
-                 if this flag is set, then the input is assumed to be
-                 a file that is normally output by dagchainer, containing
-                 genes grouped by diagonal. each group is merged into a single
-                 'meta' gene and the resulting 'meta'-genes are run as normal
-                 through dagchainer.""")
+    p.add_option('--merge', dest='merge', default=None,
+                 help="""\
+                 path to a file to send the output.
+                 when this is specified, the the output is sent to the
+                 specified file. then dagchainer is re-run with --gm and
+                 --Dm (corresponding to -g and -D in this help menu. but
+                 run with each diagonal in the original output as a single
+                 gene the resulting 'merged'-genes are run as normal
+                 through dagchainer.
+                 the final ouput file with the name of this value + ".meta",
+                 will contain genes merged into meta groups.
+                 """)
 
     opts, _ = p.parse_args() 
 
@@ -376,10 +380,14 @@ a_seqid<tab>a_accn<tab>a_start<tab>a_end<tab>b_seqid<tab>b_accn<tab>b_start<tab>
     if opts.min_score is None:
         opts.min_score = int(opts.min_aligned_pairs * 0.5 * opts.max_match_score)
 
-    all_matches = parse_file(opts.dag, opts.evalue, opts.ignore_dist, opts.meta_genes)
 
-    meta = iterate_matches(all_matches, opts)
-    if opts.meta_genes:
+    all_matches = parse_file(opts.dag, opts.evalue, opts.ignore_dist, merge_genes=False)
+
+    out_file = open(opts.merge, 'wb') if opts.merge else sys.stdout
+    meta = iterate_matches(all_matches, opts, out=out_file)
+
+
+    if opts.merge:
         assert len(meta)
         merge_meta(meta, opts)
 

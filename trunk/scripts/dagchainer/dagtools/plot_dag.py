@@ -16,31 +16,47 @@ def main(args):
                  action='store_true')
 
     p.add_option('-d', '--dag', dest='dag', help='path to dag file')
+    p.add_option('-b', '--background', dest='back', default=None,
+                 help='path to dag file of points to plot in background')
     # TODO outfile.
 
     opts, _ = p.parse_args(args)
-    if not (opts.qseqid and opts.sseqid and opts.dag and opts.png):
+    if not (opts.qseqid and opts.sseqid and (opts.dag or opts.back) and opts.png):
         sys.exit(p.print_help())
-    plot(opts.dag, opts.qseqid, opts.sseqid, opts.png, opts.lines)
+    ax = None
+    if opts.back:
+        ax = plot(opts.back, opts.qseqid, opts.sseqid, opts.png, False, ax, False)
 
-def plot(dagfile, qseqid, sseqid, png, lines=False):
+    if opts.dag:
+        plot(opts.dag, opts.qseqid, opts.sseqid, opts.png, opts.lines, ax)
 
-    matplotlib.use('Agg')
+def plot(dagfile, qseqid, sseqid, png, lines=False, ax=None, colored=True):
 
-    from matplotlib import pyplot as plt
-    f = plt.figure()
-    ax = f.add_subplot(1, 1, 1)
+    if ax is None:
+        matplotlib.use('Agg')
+        from matplotlib import pyplot as plt
+        f = plt.figure()
+        ax = f.add_subplot(1, 1, 1)
+    else:
+        from matplotlib import pyplot as plt
 
     xmax = 0
     ymax = 0
 
-    colors = cycle('rgbcmyk')
+    colors = cycle('rgbcmy')
+    if colored:
+        alpha = 0.9
+        c = 'y'
+        s = 2
+    else:
+        alpha = 0.5
+        c = 'k'
+        s = 0.3
 
-    c = 'y'
     pts = []
     for line in open(dagfile):
         if line[0] == '#': 
-            if qseqid in line and sseqid in line:
+            if colored and qseqid in line and sseqid in line:
                 c = colors.next()
             continue
         dag = DagLine(line)
@@ -59,14 +75,13 @@ def plot(dagfile, qseqid, sseqid, png, lines=False):
 
     if not lines:
         pts = np.array(pts, dtype=[('x', int), ('y', int), ('c', 'S1')])
-        ax.scatter(pts['x'], pts['y'], edgecolor='none', c=pts['c'], s=2)
+        ax.scatter(pts['x'], pts['y'], edgecolor='none', c=pts['c'], s=s,
+                  alpha=alpha)
 
-
-    ax.set_xlim(0, xmax)
-    ax.set_ylim(0, ymax)
+    #ax.set_xlim(0, xmax)
+    #ax.set_ylim(0, ymax)
     plt.savefig(png)
-    #plt.show()
-    plt.close()
+    return ax
 
 if __name__ == "__main__":
     if len(sys.argv) < 2: sys.argv.append('zzz')
