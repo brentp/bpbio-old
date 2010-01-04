@@ -41,8 +41,8 @@ def blast_to_dag(blast_file, query, subject, qgff_file, sgff_file, qdups,
     for line in open(blast_file):
         line = line.split("\t")
 
-        if line[0] in qdups: n_qdups += 1; continue
-        if line[1] in sdups: n_sdups += 1; continue
+        if qdups is not None and line[0] in qdups: n_qdups += 1; continue
+        if sdups is not None and line[1] in sdups: n_sdups += 1; continue
         qfeat = qgff[line[0]]
         sfeat = sgff[line[1]]
 
@@ -73,6 +73,14 @@ def blast_to_dag(blast_file, query, subject, qgff_file, sgff_file, qdups,
         print >>sys.stderr, "removed %i dups from subject" % n_sdups
         if n_sdups == 0:
             raw_input("didnt remove any dups from the subject, this is Baad!!!...  press a key")
+
+def genomic_blast_to_dag(blast_file, merge_at=10000):
+
+    for line in open(blast_file):
+        bline = line.split("\t")
+
+
+
 
 def main(args):
     from optparse import OptionParser
