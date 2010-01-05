@@ -19,7 +19,7 @@ def get_blast_file(qfasta, sfasta, out_dir=None):
     if not out_dir: return blast_file
     if out_dir is True:
         d = os.path.dirname(qfasta)
-        return os.path.join(d, blast_file)
+        return os.path.abspath(os.path.join(d, blast_file))
     return os.path.join(out_dir, blast_file)
 
 def is_current_file(a, b):
