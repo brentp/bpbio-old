@@ -26,7 +26,7 @@ Example
     IN=atat.dag
     OUT=a.out
     python dagtools/evalue_adjust.py -c 4 $IN | python dag_chainer.py -g 40000 -D 160000 -A 4 --merge $OUT -
-    python dagtools/plot_dag.py -q athaliana_3 -s athaliana_5 -p dotplot.png -d ${OUT}.meta
+    python dagtools/plot_dag.py -q athaliana_3 -s athaliana_5 -p dotplot.png -d ${OUT}.merge
 
 
 3. and view the output in dotplot.png

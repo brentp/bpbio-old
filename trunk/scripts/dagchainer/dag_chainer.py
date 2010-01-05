@@ -52,7 +52,7 @@ def parse_pyheader(header, asstring=False):
     return dict(zip(cols, li))
 
 
-def get_meta_gene(fh, header=[None]):
+def get_merge_gene(fh, header=[None]):
     if header[0] is None:
         header[0] = fh.readline()
     line = fh.readline()
@@ -98,7 +98,7 @@ def parse_file(dag_file, evalue_cutoff, ignore_dist, merge_genes=False):
     dag = True
     while dag:
         if merge_genes:
-            dag, dag_header = get_meta_gene(fh)
+            dag, dag_header = get_merge_gene(fh)
             if dag is None: break
 
         else:
@@ -229,7 +229,7 @@ def run_and_print(all_matches, opts, out=sys.stdout):
     # if out is False, it means we dont want to print, and so we 
     # dont print.
     print_genes = bool(out)
-    meta_ids = []
+    merge_ids = []
 
     for (a_seqid, b_seqid), matches in sorted(all_matches.iteritems()):
 
@@ -245,12 +245,12 @@ def run_and_print(all_matches, opts, out=sys.stdout):
             if print_genes:
                 print_alignment('f', dag_num, dag_score, group, opts, out)
             else:
-                # for merged meta we just keep the direction and the 'accn' where
-                # the 'accn' is actually just the diag_id for the case of a meta
-                # run. this is used later to merge the meta with the genes.
+                # for merged merge we just keep the direction and the 'accn' where
+                # the 'accn' is actually just the diag_id for the case of a merge
+                # run. this is used later to merge the merge with the genes.
                 # since the 'A' and 'B' accn are the same (except for the starting
                 # letter, just keep 'A'.
-                meta_ids.append(('f', a_seqid, b_seqid,
+                merge_ids.append(('f', a_seqid, b_seqid,
                                  [g['pair']['A']['accn'][1:] for g in group], 
                                  len(group)))
 
@@ -258,40 +258,40 @@ def run_and_print(all_matches, opts, out=sys.stdout):
             if print_genes:
                 print_alignment('r', dag_num, dag_score, group, opts, out)
             else:
-                meta_ids.append(('r', a_seqid, b_seqid,
+                merge_ids.append(('r', a_seqid, b_seqid,
                                  [g['pair']['A']['accn'][1:] for g in group],
                                  len(group)))
 
         pr.join()
         pf.join()
 
-    return meta_ids
+    return merge_ids
 
 ######################
-## meta diags stuff ##
+## merge diags stuff ##
 ######################
 """
 # all_matches
 {('athaliana_2', 'athaliana_3'): {('AT2G47870', 'AT3G62950'): {'A': {'seqid': 'athaliana_2', 'start': 19610409, 'accn': 'AT2G47870', 'end': 19610720, 'mid': 19610564}, 'evalue': 2.3403500000000001e-09, 'B': {'seqid': 'athaliana_3', 'start': 23277224, 'accn': 'AT3G62950', 'end': 23277909, 'mid': 23277566}, 'diag_str': '1^1945.0^athaliana_2^athaliana_3^f^158'}, ('AT2G40820', 'AT3G56480'): {'A': {'se 
 
-# meta
+# merge
 [('f', [('a8^252.0^athaliana_1^athaliana_1^f^18', 'b8^252.0^athaliana_1^athaliana_1^f^18'), ('a4^100.0^athaliana_1^athaliana_1^r^5', 'b4^100.0^athaliana_1^athaliana_1^r^5')]), ('f', [('a7^486.0^athaliana_1^athaliana_1^f^43', 'b7^486.0^athaliana_1^athaliana_1^f^43'), ('a1^6750.0^athaliana_1^athaliana_1^f^414', 'b1^6750.0^athaliana_1^athaliana_1^f^414')]), ('f', [('a11^154.0^athaliana_1^athaliana_1^
 """
-def merge_meta(meta, all_matches, opts, out):
-    """ merge the meta genes with the 
+def merge_merge(merge, all_matches, opts, out):
+    """ merge the merge genes with the 
     original dag data sent in"""
     #cols = ('id', 'dagscore', 'a_seqid', 'b_seqid', 'dir', 'ngenes')
     by_diag = matches_by_diag_id(all_matches)
     # wnat the longest first. then we remove shorter ones that are completely contained
     # in the larger ones.
     seen = {}
-    meta.sort(key=operator.itemgetter(4), reverse=True)
-    for i, (direction, a_seqid, b_seqid, diag_str_list, llen) in enumerate(meta):
-        # so here we have a list of meta-diags merged into a single diag... 
+    merge.sort(key=operator.itemgetter(4), reverse=True)
+    for i, (direction, a_seqid, b_seqid, diag_str_list, llen) in enumerate(merge):
+        # so here we have a list of merge-diags merged into a single diag... 
         dags = []
 
         # and we go through and merge them into dags[].
-        # TODO: need to sort this out better. can meta-diags with opposite directions
+        # TODO: need to sort this out better. can merge-diags with opposite directions
         # be merged??? when?
         for diag_str in diag_str_list:
             if not diag_str in by_diag: continue
@@ -322,7 +322,7 @@ def matches_by_diag_id(matches):
       
     return dict(by_diag) 
 
-def adjust_opts_for_meta(opts):
+def adjust_opts_for_merge(opts):
     opts.min_aligned_pairs = 1
     opts.min_score = int(opts.min_aligned_pairs * 0.5 * opts.max_match_score)
     opts.gap_dist = opts.gap_dist_merge if opts.gap_dist_merge != 0 else 4 * opts.gap_dist 
@@ -375,8 +375,8 @@ a_seqid<tab>a_accn<tab>a_start<tab>a_end<tab>b_seqid<tab>b_accn<tab>b_start<tab>
                  run with each diagonal in the original output as a single
                  gene the resulting 'merged'-genes are run as normal
                  through dagchainer.
-                 the final ouput file with the name of this value + ".meta",
-                 will contain genes merged into meta groups.
+                 the final ouput file with the name of this value + ".merge",
+                 will contain genes merged into merge groups.
                  """)
 
     # dag file can also be sent in as the first arg.
@@ -408,9 +408,9 @@ a_seqid<tab>a_accn<tab>a_start<tab>a_end<tab>b_seqid<tab>b_accn<tab>b_start<tab>
         unmerged_dags = parse_file(opts.merge, opts.evalue, opts.ignore_dist, merge_genes=False)
 
         # then we run and print without printing.
-        adjust_opts_for_meta(opts)
-        # run it to get the meta, but dont print.
-        meta = run_and_print(merged_dags, opts, out=False)
-        out_file = open(opts.merge + ".meta", 'wb') 
-        merge_meta(meta, unmerged_dags, opts, out_file)
+        adjust_opts_for_merge(opts)
+        # run it to get the merge, but dont print.
+        merge = run_and_print(merged_dags, opts, out=False)
+        out_file = open(opts.merge + ".merge", 'wb') 
+        merge_merge(merge, unmerged_dags, opts, out_file)
 
