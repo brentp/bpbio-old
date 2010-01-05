@@ -11,23 +11,21 @@ import collections
 
 
 def read_dag_to_tree(all_hits):
-    """create an rtree, using query as x, subject as y
-    do this for all htis, then for each diag, do an intersection
-    (+bbuffer) to find nearby 
+    """create a ckdtree, using query as x, subject as y
+    do this for all htis, then for each diag, do an query
+    to find nearby 
     """
     trees = collections.defaultdict(list)
     lines = collections.defaultdict(list)
     for sline in open(all_hits):
         if sline[0] == '#': continue
-        line = sline[:-1].split("\t")
-        chrs = (line[0], line[4])
-        # so save the index, which will return i when queried
-        # and associate i with the text line vie the dict.
-        trees[chrs].append((int(line[2]),  int(line[6])))
-        lines[chrs].append(line)
+        d = DagLine(sline)
+        chrs = (d.a_seqid, d.b_seqid)
+        trees[chrs].append((d.a_start, d.b_start))
+        lines[chrs].append((d, sline))
 
     for chrs in trees:
-        trees[chrs] = cKDTree(np.array(trees[chrs]))
+        trees[chrs] = cKDTree(np.array(trees[chrs]), leafsize=16)
     return trees, lines
         
 def main(dist, diags, all_hits):
@@ -42,7 +40,7 @@ def main(dist, diags, all_hits):
             continue
         d = DagLine(sline)
         chrs = (d.a_seqid, d.b_seqid)
-        seen[(d.a_accn, d.b_accn)] = True
+        seen[(d.a_accn, d.b_accn)] = None
 
         tree = trees[chrs]
         info_lines = lines[chrs]
@@ -55,11 +53,11 @@ def main(dist, diags, all_hits):
 
         print sline.rstrip()
         for i in idxs:
-            iline = info_lines[i]
-            ikey = (iline[1], iline[5])
+            d, iline = info_lines[i]
+            ikey = (d.a_accn, d.b_accn)
             if ikey in seen: continue
             seen[ikey] = True
-            print "\t".join(iline)
+            print iline,
 
 
 if __name__ == "__main__":
