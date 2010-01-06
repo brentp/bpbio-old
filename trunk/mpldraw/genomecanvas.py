@@ -73,7 +73,7 @@ class Block(Rectangle):
 class HSP(Block):
     default_axis = BOTTOM_AXIS
 
-    def __init__(self, start, stop, strand=None, height=0.02, fc='#cacaca', ec='#777777', **kwargs):
+    def __init__(self, start, stop, strand=None, height=0.018, fc='#cacaca', ec='#777777', **kwargs):
         kwargs['zorder'] = 3
         if not 'y' in kwargs: kwargs['y'] = 0.5
         Block.__init__(self, None, start, stop, strand, height=height, fc=fc, ec=ec, **kwargs)
@@ -105,13 +105,14 @@ class TwoAxFigure(Figure):
     def setup_axes(self):
         # TODO axes 2 should have y-scale.
 
-        rect = (0, 0.07, 1, 1) 
-        axes = [self.add_axes(rect, autoscale_on=False, aspect='auto', alpha=1.0, label=str(i)) for i in range(2)]
+        self.rects = rects = [(0, 0.07, 1, 0.93) , (0, 0, 1, 1)]
+        #self.rect = rect = (0, 0, 1, 1) 
+        axes = [self.add_axes(rects[i], autoscale_on=False, aspect='auto', alpha=1.0, label=str(i)) for i in range(2)]
 
         hori = [Size.AxesX(axes[0])]
         vert = [Size.Scaled(0.30), Size.Scaled(0.70)]
 
-        d = Divider(self, rect, hori, vert) 
+        d = Divider(self, rects[0], hori, vert) 
 
         for i, ax in enumerate(axes):
             ax.set_axes_locator(d.new_locator(nx=0, ny=i))
@@ -162,7 +163,7 @@ class TwoAxFigure(Figure):
         ylim = self.axes[TOP_AXIS].get_ylim()
         h = ylim[1] - ylim[0]
         for p in self.axes[TOP_AXIS].patches:
-            if isinstance(p, HSP):
+            if isinstance(p, Block):
                 p.set_height(p.get_height() * h)
 
 
@@ -206,10 +207,10 @@ if __name__ == "__main__":
 
     gf.add_patch(HSP(1400, 1595), TOP_AXIS)
     import numpy as np
-    gf.axes[1].plot(np.sin(np.linspace(0, 10, 1600)), zorder=1)
+    gf.axes[1].plot(0.5 + (0.5 * np.sin(np.linspace(0, 10, 1600))), zorder=1)
 
     gf.set_xlim(0, 1600)
-    #gf.axes[1].set_ylim(0, 10)
+    gf.axes[1].set_ylim(0, 1.0)
     gf.save('/var/www/t/t.png')
 
  

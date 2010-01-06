@@ -16,7 +16,7 @@ def cache_clear(cache, node, qchr, schr):
     if there are too many, put one back into
     the h5 file
     """
-    if len(cache) < 5: return
+    if len(cache) < 5000: return
     #print "updating cache: %s, %s" % (qchr, schr)
     rmkey = [k for k in cache if not k in (qchr, schr)][0]
     getattr(node, 'c' + rmkey)[:] = cache[rmkey]
