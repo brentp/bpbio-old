@@ -6,7 +6,7 @@ from Cython.Distutils import build_ext
 version = '0.1'
 
 
-setup(name='cdagline',
+setup(name='dagtools',
       version=version,
       description="",
       long_description="""\
@@ -20,7 +20,7 @@ setup(name='cdagline',
       url='',
       license='BSD',
       test_suite='nose.collector',
-      package_dir = {'': 'dagtools'},
+      #package_dir = {'': 'dagtools'},
       zip_safe=False,
       packages = ['dagtools'],
       entry_points={

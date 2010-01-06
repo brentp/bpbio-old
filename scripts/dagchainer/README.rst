@@ -65,6 +65,7 @@ For example plotting a chromosome pair of dag hits is done in the plot_dag.py
 library.
 The module can be installed via ::
 
+    $ cython dagtools/cdagline.pyx
     $ sudo python setup.py install
 
 
