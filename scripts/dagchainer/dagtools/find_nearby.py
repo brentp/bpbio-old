@@ -28,7 +28,7 @@ def read_dag_to_tree(all_hits):
         trees[chrs] = cKDTree(np.array(trees[chrs]), leafsize=16)
     return trees, lines
         
-def main(dist, diags, all_hits):
+def find_nearby(dist, diags, all_hits):
     """empty docstring"""
     trees, lines = read_dag_to_tree(all_hits)
     seen = {}
@@ -71,4 +71,4 @@ if __name__ == "__main__":
     if not (options.dist and options.diags and options.all):
         sys.exit(parser.print_help())
 
-    main(int(options.dist), options.diags, options.all)
+    find_nearby(int(options.dist), options.diags, options.all)
