@@ -40,3 +40,31 @@ Example
 3. and view the output in dotplot.png. the ${OUT}.merge file has the diagonals
    merged, the ${OUT}.merge.all includes points that are near the diagonals, 
    but not on what dagchainer considers the optimal path.
+
+
+Library
+-------
+the dag_chainer.py script runs the dagchainer c++ executable. It also uses tools
+from the library in the dagtools module in this directory. The most useful function
+is reading a dagline into a python object ::
+
+    >>> from dagtools import DagLine
+    >>> for line in open('somefile.dag'):
+    ...    if line[0] != "#":
+    ...    d = DagLine(line)
+    ...    print d.a_accn, d.a_start, b.b_accn, d.b_start
+
+which will loop across the file and access the attributes (available 
+attributes are (prefixed by either "a_" or "b_") start, stop, accn, seqid.
+and "evalue" (with no prefix).
+This DagLine object is essentially a C struct which is filled in C, and
+as such it is faster to create and use, and uses less memory than a python
+equivalent.
+Other scripts used in the Example_ section above can also be used as libraries.
+For example plotting a chromosome pair of dag hits is done in the plot_dag.py
+library.
+The module can be installed via ::
+
+    $ sudo python setup.py install
+
+
