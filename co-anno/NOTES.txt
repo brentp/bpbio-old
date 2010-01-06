@@ -1,1 +1,0 @@
-http://toxic.berkeley.edu/CoGe/GEvo.pl?prog=blastn&dsid1=34473&accn1=GSVIV00030427001&dsid2=34571&chr2=supercontig_3&x2=3239709&autogo=1
