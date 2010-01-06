@@ -1,0 +1,34 @@
+{
+
+"genome_a": {
+    "name":"grape",
+    "gff":"tests/data/grape.gff.orig",
+    "fasta":"tests/data/grape.fasta"
+},
+
+
+"genome_b": {
+    "name":"papaya",
+    "gff":"tests/data/papaya.gff.orig",
+    "fasta":"tests/data/papaya.fasta"
+},
+
+
+"blast": {
+   "W": 13, 
+   "a": 8,  
+   "e": 0.001
+},
+
+
+"default": {
+    "blast_path":"/usr/bin/blastall",
+    "mask_order": ["CDS", "mRNA", "MIR", "gene"],
+    "out_dir":"tests/data/",
+    "min_len": 100,
+    "reciprocal": true,
+    "blast_log": true
+}
+
+
+}
