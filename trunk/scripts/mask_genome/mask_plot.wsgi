@@ -22,11 +22,12 @@ def application(env, start_response):
     org = p['org'] # e.g. thaliana_v7
 
 
-    xmin = max(0, int(p['xmin']))
+    xmin = int(p['xmin'])
     xmax = int(p['xmax'])
 
     seqid = "c%i" % int(p['seqid'])
-    vals = h5.getNode('/%s/%s' % (org, seqid))[xmin:xmax+1]
+    xmin0 = max(xmin, 0)
+    vals = h5.getNode('/%s/%s' % (org, seqid))[xmin0:xmax+1]
     ymax = 200
 
     io = StringIO()
@@ -36,11 +37,13 @@ def application(env, start_response):
     dpi = 128.
     f.set_size_inches(int(p['width'])/dpi, 300/dpi)
     ax = f.add_axes((0,0,1,1), frameon=False, xticks=(), yticks=())
-    ax.set_autoscale_on(0)
-    ax.set_xlim(xmin,xmax)
-    ax.set_ylim(0, ymax)
-    ax.plot(range(xmin, xmax+1), vals)
-    ax.plot([xmin,xmax],[50,50],'r')
+    if xmax > 0:
+        ax.set_autoscale_on(0)
+        ax.set_xlim(xmin,xmax)
+        ax.set_ylim(0, ymax)
+        ax.plot(range(xmin0, xmax+1), vals)
+        ax.plot([xmin0, xmax],[50, 50],'r')
+
     f.savefig(io, format='png', dpi=dpi)
     io.seek(0)
 
