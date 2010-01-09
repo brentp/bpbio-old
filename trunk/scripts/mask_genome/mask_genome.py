@@ -16,7 +16,7 @@ def cache_clear(cache, node, qchr, schr):
     if there are too many, put one back into
     the h5 file
     """
-    if len(cache) < 5000: return
+    if len(cache) < 50: return
     #print "updating cache: %s, %s" % (qchr, schr)
     rmkey = [k for k in cache if not k in (qchr, schr)][0]
     getattr(node, 'c' + rmkey)[:] = cache[rmkey]
@@ -107,7 +107,7 @@ def mask(fasta_file, org, cutoff, mask_value='X'):
 
     soft_mask = mask_value.lower() == 'soft'
     for seqid in sorted(fasta.iterkeys()): 
-
+        masked = 0
         if soft_mask:
             seq = str(fasta[seqid])
             # mask is the lowercase sequence.
@@ -131,8 +131,10 @@ def mask(fasta_file, org, cutoff, mask_value='X'):
         masked_seq = np.where(numexpr.evaluate("hit_counts > %i" % cutoff)
                               , mask_value, seq).tostring() 
 
-        print >>sys.stderr, "! seq:%s len:%i" %(seqid, len(seq))
-        assert len(seq) == len(masked_seq)
+        l = len(masked_seq)
+        print >>sys.stderr, "! seq:%s len:%i %%masked:%.3f" % (seqid, l, 
+                                   100.0 * masked_seq.count(mask_value) / l)
+        assert len(seq) == l
         out.write('>' + seqid + '\n')
         out.write(masked_seq + '\n')
 
