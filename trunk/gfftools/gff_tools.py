@@ -28,3 +28,55 @@ def get_sequence(feat, fasta, types=('CDS', 'mRNA', 'gene')):
             return seq.upper()
     raise Exception("no sequence for %s" % feat.attribs["ID"])
 
+from pyfasta import complement
+import collections
+
+def locs_for_feature(parent, prefs=('CDS', 'mRNA', 'gene', 'MIR')):
+    try:
+        types = collections.defaultdict(list)
+        for f in parent:
+            types[f.type].append(f)
+        types = dict(types)
+
+        for p in prefs:
+            if p in types:
+                return types[p], p
+        else:
+            return [parent], getattr(parent, 'type', 'type')
+    except:
+        return [parent], getattr(parent, 'type', 'type')
+
+
+def sequence_for_feature(f, fa, locs=None):
+    seq = ""
+
+    fas = fa[f.seqid]
+
+    if locs is None:
+        locs, type = locs_for_feature(f)
+    for loc in locs:
+        seq += fas[loc.start -1: loc.end]
+    if getattr(f, 'strand', '+') in ('-', -1, '-1'):
+        return complement(seq)[::-1]
+    return seq
+
+def sequence_with_locs(seq, locs, as_idx=True, strand='+'):
+    """
+    return the global positions zipped with:
+        the sequence when `as_idx` is False
+        the local positoins when `as_idx` is True
+    useful to see where the gaps/introns are"""
+    
+    locslist = []
+    for l in locs:
+        locslist += range(l.start - 1, l.end)
+    assert len(locslist) == len(seq), (len(locslist), len(seq))
+    if strand == '-':
+        locslist = locslist[::-1]
+    else: assert strand == '+'
+
+    if as_idx:
+        return list(enumerate(locslist))
+    else:
+        return zip(seq, locslist)
+
