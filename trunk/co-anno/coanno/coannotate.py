@@ -296,8 +296,8 @@ def find_missed(sorg, qgff_file, sgff_file, q_snon_blast, q_s_blast,
     total area. so hits like [105, 120], [190, 205] only cover 
        15 + 15 / (205 - 105) = 30%
     """
-    sgff = FeatureIndexMemory(sgff_file)
     qgff = FeatureIndexMemory(qgff_file)
+    sgff = FeatureIndexMemory(sgff_file)
 
     # grouped_by_q has all the subject genomic hits mapped to the query feature.
     # and the subject start, stop are chromosomal positions.
@@ -346,8 +346,14 @@ def find_missed(sorg, qgff_file, sgff_file, q_snon_blast, q_s_blast,
 
                 # check if it's inside an existing gene. in which case, 
                 # call it a cds and give the the same name as the parent.
-                parent = [s for s in sgff.get_features_for_range(feat['start'],
-                    feat['stop'], feat['chr'])] # if s.strand == feat['strand']]
+                try:
+                    parent = [s for s in sgff.get_features_for_range(feat['start'],
+                        feat['stop'], feat['chr'])] # if s.strand == feat['strand']]
+                except:
+                    # this seqid doesnt have any features.
+                    assert sgff.get_features_for_seqid(feat['chr']) == []
+                    yield feat
+                    continue
 
                 if len(parent) == 0:
                     yield feat
