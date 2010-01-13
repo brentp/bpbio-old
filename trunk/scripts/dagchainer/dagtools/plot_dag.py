@@ -78,9 +78,7 @@ def plot(dagfile, qseqid, sseqid, png, lines=False, ax=None, colored=True):
         if pts.shape[0] > 0:
             ax.scatter(pts['x'], pts['y'], edgecolor='none', c=pts['c'], s=s,
                   alpha=alpha)
-
-    #ax.set_xlim(0, xmax)
-    #ax.set_ylim(0, ymax)
+    ax.axis('tight')
     plt.savefig(png)
     return ax
 
