@@ -50,20 +50,26 @@ def blast_to_dag(blast_file, query, subject, qgff_file, sgff_file, qdups,
             qname = qfeat.attribs["ID"]
             sname = sfeat.attribs["ID"]
             key = qname + "@" + sname
-            if key in seen: continue
-            seen[key] = True
+            v = float(line[-2])
+            if key in seen: 
+                if v > seen[key]:
+                    continue
+                else:
+                    seen[key] = v
+            else:
+                seen[key] = v
         
         if order:
             qo = qorder[qfeat.attribs["ID"]]
             so = sorder[sfeat.attribs["ID"]]
             print "\t".join(map(str, [
                  qorg + qfeat.seqid, line[0], qo, qo,
-                 sorg + sfeat.seqid, line[1], so, so]))
+                 sorg + sfeat.seqid, line[1], so, so, line[-2]]))
 
         else:
             print "\t".join(map(str, [
                  qorg + qfeat.seqid, line[0], qfeat.start, qfeat.end
-                ,sorg + sfeat.seqid, line[1], sfeat.start, sfeat.end]))
+                ,sorg + sfeat.seqid, line[1], sfeat.start, sfeat.end, line[-2]]))
 
     if qdups:
         print >>sys.stderr, "removed %i dups from query  " % n_qdups

@@ -24,7 +24,7 @@ cdef class DagLine:
 
     def __init__(self, char *sline=NULL):
         if sline == NULL: return
-
+        self.evalue = 1.0
         sscanf(sline, dag_format_line, 
                self.a_seqid, self.a_accn, &self.a_start, &self.a_end,
                self.b_seqid, self.b_accn, &self.b_start, &self.b_end,
