@@ -153,6 +153,7 @@ int  main (int argc, char* argv[])  {
     //fprintf(stderr, "%d %d %d %f\n", s.pairID, s.x, s.y, s.score);
     score.push_back(s); //copy match to score list.
   }
+  //fprintf(stderr, "got %i lines\n", score.size());
   n = score.size();
   
   if  (n == 0)  {

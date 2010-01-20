@@ -12,10 +12,10 @@ from dagtools import DagLine
 import collections
 import operator
 
-try:
-    from processing import Process, Pipe as mPipe
-except ImportError:
-    from multiprocessing import Process, Pipe as mPipe
+#try:
+    #    from processing import Process, Pipe as mPipe
+    #except ImportError:
+        #    from multiprocessing import Process, Pipe as mPipe
 
 def scoringF(evalue, constant_match=CONSTANT_MATCH_SCORE, max_match=MAX_MATCH_SCORE):
     if not constant_match is None:
@@ -88,28 +88,67 @@ def get_merge_gene(fh, header=[None]):
          'evalue': 1e-250}
     return DagLine.from_dict(d), header_string
     
+class DagGenerator(object):
+    __slots__ = ('fh', 'best', 'getter')
+    def __init__(self, fh, getter_fn):
+        self.fh = fh
+        self.getter = getter_fn
 
-def parse_file(dag_file, evalue_cutoff, ignore_dist, merge_genes=False):
+    def __iter__(self):
+        while True:
+            d, header = self.getter(self.fh)
+            if d is None: break
+            yield d, header
+        raise StopIteration 
+
+class BestDagGenerator(DagGenerator):
+    def __init__(self, fh, getter_fn):
+        DagGenerator.__init__(self, fh, getter_fn)
+
+    def __iter__(self):
+        ahits = collections.defaultdict(list)
+        bhits = collections.defaultdict(list)
+        hits = []
+        for d, header in DagGenerator(self.fh, self.getter):
+            if d.a_seqid == d.b_seqid and d.a_accn == d.b_accn: continue
+            hits.append((d, header))
+            ahits[d.a_accn].append((d.evalue, d.b_accn))
+            bhits[d.b_accn].append((d.evalue, d.a_accn))
+        HITS = 1
+        aahits = {}
+        for a, li in ahits.iteritems(): 
+            li.sort() 
+            aahits[a] = [ah[1] for ah in li[:HITS]]
+        bbhits = {}
+        for b, li in bhits.iteritems(): 
+            li.sort()
+            bbhits[b] = [bh[1] for bh in li[:HITS]]
+        del bhits, ahits
+        self.hits = hits
+
+        i = 0
+        for d, header in self.hits:
+            if d.b_accn in aahits[d.a_accn] and d.a_accn in bbhits[d.b_accn]:
+                i += 1
+                yield d, header
+        print >>sys.stderr, "%i hits filtered down to %i" % (len(hits), i)
+        del self.hits
+        raise StopIteration 
+
+def parse_file(dag_file, evalue_cutoff, ignore_dist, merge_genes=False, best_only=False):
     """ if dag_file is "-", then the stuff is read from stdin. """
 
     accn_info = {}
     matches = {}
     fh = open(dag_file) if dag_file != "-" else sys.stdin
-    dag = True
-    while dag:
-        if merge_genes:
-            dag, dag_header = get_merge_gene(fh)
-            if dag is None: break
+    get_dag_next = get_merge_gene if merge_genes else get_dag_line
+    klass = BestDagGenerator if best_only else DagGenerator
 
-        else:
-            dag, dag_header = get_dag_line(fh)
-            if dag is None: break
-
-            if dag.evalue >= evalue_cutoff: continue
-            if dag.a_seqid == dag.b_seqid:
-                if abs(dag.a_start - dag.b_start) < ignore_dist: continue
-                if dag.a_accn == dag.b_accn: continue
-        
+    for dag, dag_header in iter(klass(fh, get_dag_next)):
+        if dag.evalue >= evalue_cutoff: continue
+        if dag.a_seqid == dag.b_seqid:
+            if abs(dag.a_start - dag.b_start) < ignore_dist: continue
+            if dag.a_accn == dag.b_accn: continue
         if not dag.a_accn in accn_info:
             mid = int((dag.a_start + dag.a_end + 0.5) / 2)
             a_feat = {'accn': dag.a_accn, 'start': dag.a_start, 'end': dag.a_end, 'mid': mid, 'seqid': dag.a_seqid}
@@ -148,6 +187,7 @@ def parse_file(dag_file, evalue_cutoff, ignore_dist, merge_genes=False):
             these_matches[accn_key]['diag_str'] = dag_header
 
     get_dag_line.header = None
+    print >>sys.stderr, "pairs:", sum(len(t.values()) for t in matches.values())
     return matches
 
 
@@ -160,11 +200,12 @@ def parse_cheader(header):
 
 
 def run_dag_chainer(a_seqid, b_seqid, filename, matches, reverse, options,
-                    child_conn,
+                    # child_conn,
                    dagchainer=os.path.join(os.path.abspath(os.path.dirname(__file__)), "dagchainer")):
     """
     calls dagchainer and yields groups of matches
     """
+    reverse = "-r" if "r" in reverse else ""
     o = options
     cmd = "%(dagchainer)s -G %(gap_length)s -O %(gap_init)s -E %(gap_extend)s -S " +\
           "%(min_score)s -D %(max_dist)s  -F %(filename)s %(reverse)s" # > %(tmp_file)s";
@@ -172,7 +213,14 @@ def run_dag_chainer(a_seqid, b_seqid, filename, matches, reverse, options,
                      gap_extend=o.gap_extend, min_score=o.min_score, 
                      max_dist=o.gap_max, filename="-", reverse=reverse,
                     dagchainer=dagchainer)
+    #print >>sys.stderr, cmd
     num2pair = matches.values()
+    """
+    if not len(num2pair): 
+        child_conn.send([])
+        child_conn.close()
+        return
+    """
     process = Popen(cmd, stdin=PIPE, stdout=PIPE, bufsize=8*4096, shell=True)
     write = process.stdin.write
     for i, pair in enumerate(num2pair):
@@ -199,18 +247,19 @@ def run_dag_chainer(a_seqid, b_seqid, filename, matches, reverse, options,
         pair_id, dag_chain_score = line.rstrip("\n").split(" ")
         pair = num2pair[int(pair_id)]
         data.append({'pair': pair, 'dag_score': float(dag_chain_score)})
-
     if len(data) >= o.min_aligned_pairs:
         dag_num, dag_score = header
         all_data.append((dag_num, dag_score, data))
-    child_conn.send(all_data)
-    child_conn.close()
+    #child_conn.send(all_data)
+    # child_conn.close()
+    return all_data
     
-def print_alignment(dir, diag_num, dag_score, group, opts, out):
+def print_alignment(dir, diag_num, dag_score, group, out):
     # dir is 'f' or 'r'
     # diag_id dagchainer score, a_seqid, b_seqid, dir, npairs
     header_fmt = "#%i\t%.1f\t%s\t%s\t%s\t%i" 
 
+    # best tells us to save the polygons for the orthologies
     d = group[0]['pair']
     print >>out, header_fmt % \
             (diag_num, dag_score, d['A']['seqid'], 
@@ -230,9 +279,10 @@ def run_and_print(all_matches, opts, out=sys.stdout):
     # dont print.
     print_genes = bool(out)
     merge_ids = []
+    best = opts.best
 
     for (a_seqid, b_seqid), matches in sorted(all_matches.iteritems()):
-
+        """
         parent_connf, child_connf = mPipe()
         pf = Process(target=run_dag_chainer, args=(a_seqid, b_seqid, filename, matches, "", opts, child_connf))
         pf.start()
@@ -243,7 +293,7 @@ def run_and_print(all_matches, opts, out=sys.stdout):
 
         for dag_num, dag_score, group in parent_connf.recv():
             if print_genes:
-                print_alignment('f', dag_num, dag_score, group, opts, out)
+                print_alignment('f', dag_num, dag_score, group, out, best)
             else:
                 # for merged merge we just keep the direction and the 'accn' where
                 # the 'accn' is actually just the diag_id for the case of a merge
@@ -253,30 +303,39 @@ def run_and_print(all_matches, opts, out=sys.stdout):
                 merge_ids.append(('f', a_seqid, b_seqid,
                                  [g['pair']['A']['accn'][1:] for g in group], 
                                  len(group)))
+        pf.join()
 
         for dag_num, dag_score, group in parent_connr.recv():
             if print_genes:
-                print_alignment('r', dag_num, dag_score, group, opts, out)
+                print_alignment('r', dag_num, dag_score, group, out, best)
             else:
                 merge_ids.append(('r', a_seqid, b_seqid,
                                  [g['pair']['A']['accn'][1:] for g in group],
                                  len(group)))
 
         pr.join()
-        pf.join()
+        """
+
+        for dir in ("f", "r"):
+            for dag_num, dag_score, group in run_dag_chainer(a_seqid, b_seqid, filename, matches, dir, opts):
+                if print_genes:
+                    print_alignment(dir, dag_num, dag_score, group, out)
+                else:
+                    # for merged merge we just keep the direction and the 'accn' where
+                    # the 'accn' is actually just the diag_id for the case of a merge
+                    # run. this is used later to merge the merge with the genes.
+                    # since the 'A' and 'B' accn are the same (except for the starting
+                    # letter, just keep 'A'.
+                    merge_ids.append((dir, a_seqid, b_seqid,
+                                     [g['pair']['A']['accn'][1:] for g in group], 
+                                     len(group)))
+
 
     return merge_ids
 
 ######################
 ## merge diags stuff ##
 ######################
-"""
-# all_matches
-{('athaliana_2', 'athaliana_3'): {('AT2G47870', 'AT3G62950'): {'A': {'seqid': 'athaliana_2', 'start': 19610409, 'accn': 'AT2G47870', 'end': 19610720, 'mid': 19610564}, 'evalue': 2.3403500000000001e-09, 'B': {'seqid': 'athaliana_3', 'start': 23277224, 'accn': 'AT3G62950', 'end': 23277909, 'mid': 23277566}, 'diag_str': '1^1945.0^athaliana_2^athaliana_3^f^158'}, ('AT2G40820', 'AT3G56480'): {'A': {'se 
-
-# merge
-[('f', [('a8^252.0^athaliana_1^athaliana_1^f^18', 'b8^252.0^athaliana_1^athaliana_1^f^18'), ('a4^100.0^athaliana_1^athaliana_1^r^5', 'b4^100.0^athaliana_1^athaliana_1^r^5')]), ('f', [('a7^486.0^athaliana_1^athaliana_1^f^43', 'b7^486.0^athaliana_1^athaliana_1^f^43'), ('a1^6750.0^athaliana_1^athaliana_1^f^414', 'b1^6750.0^athaliana_1^athaliana_1^f^414')]), ('f', [('a11^154.0^athaliana_1^athaliana_1^
-"""
 def merge_merge(merge, all_matches, opts, out):
     """ merge the merge genes with the 
     original dag data sent in"""
@@ -367,20 +426,24 @@ a_seqid<tab>a_accn<tab>a_start<tab>a_end<tab>b_seqid<tab>b_accn<tab>b_start<tab>
     p.add_option('-M', dest='max_match_score', type='float', default=50,
                 help="maximum score to be assigned to a match")
     p.add_option('--merge', dest='merge', default=None,
-                 help="""\
-                 path to a file to send the output.
-                 when this is specified, the the output is sent to the
-                 specified file. then dagchainer is re-run with --gm and
-                 --Dm (corresponding to -g and -D in this help menu. but
-                 run with each diagonal in the original output as a single
-                 gene the resulting 'merged'-genes are run as normal
-                 through dagchainer.
-                 the final ouput file with the name of this value + ".merge",
-                 will contain genes merged into merge groups.
+                 help=\
+         """ path to a file to send the output. when this is specified, the the 
+         output is sent to the specified file. then dagchainer is re-run with
+         --gm and --Dm (corresponding to -g and -D in this help menu. but run
+         with each diagonal in the original output as a single gene the
+         resulting 'merged'-genes are run as normal through dagchainer. the
+         final ouput file with the name of this value + ".merge", will contain
+         genes merged into merge groups.
                  """)
+
+    p.add_option('--best', dest='best', default=False, action='store_true', help=\
+             "use only the reciprocal best hit in defining the dag lines. this"
+             " useful for defining orthologies. output to stdout will be pairs"
+             " as usual")
 
     # dag file can also be sent in as the first arg.
     opts, maybe_dag = p.parse_args() 
+    print >>sys.stderr, opts
 
     if not (opts.dag or maybe_dag):
         sys.exit(p.print_help())
@@ -391,21 +454,23 @@ a_seqid<tab>a_accn<tab>a_start<tab>a_end<tab>b_seqid<tab>b_accn<tab>b_start<tab>
 
 
     # so here, we run the original dag_chainer. and save to opts.merge.
-    all_matches = parse_file(opts.dag, opts.evalue, opts.ignore_dist, merge_genes=False)
+    all_matches = parse_file(opts.dag, opts.evalue, opts.ignore_dist, merge_genes=False, best_only=opts.best)
     out_file = open(opts.merge, 'wb') if opts.merge else sys.stdout
     run_and_print(all_matches, opts, out=out_file)
 
 
 
 
+    #opts.best = False # never have best and merge...
+    sys.exit()
     if opts.merge:
         out_file.close()
         # then we read that output file, merging the genes.
-        merged_dags = parse_file(opts.merge, opts.evalue, opts.ignore_dist, merge_genes=True)
+        merged_dags = parse_file(opts.merge, opts.evalue, opts.ignore_dist, merge_genes=True, best_only=False)
 
         # doh! still need to re-parse original. but it's pretty short compared to the original
         # opts.dag so it's pretty fast.
-        unmerged_dags = parse_file(opts.merge, opts.evalue, opts.ignore_dist, merge_genes=False)
+        unmerged_dags = parse_file(opts.merge, opts.evalue, opts.ignore_dist, merge_genes=False, best_only=False)
 
         # then we run and print without printing.
         adjust_opts_for_merge(opts)
