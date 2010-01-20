@@ -26,7 +26,7 @@ def read_dag_to_tree(all_hits):
 
     for chrs in trees:
         trees[chrs] = cKDTree(np.array(trees[chrs]), leafsize=16)
-    return trees, lines
+    return dict(trees), dict(lines)
         
 def find_nearby(dist, diags, all_hits):
     """empty docstring"""
