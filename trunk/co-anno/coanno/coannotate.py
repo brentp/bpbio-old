@@ -87,8 +87,10 @@ def merge_overlapping(new_genes, min_overlap, min_pct_coverage):
             #  PARAMETER: require 30bp overlap.
             while j < len(genes) and g['end'] > genes[j]['start'] + min_overlap:
                 # can only merge genes with genes, and cds with cds.
-                if j in used_genes or genes[j]['type'] != g['type']: j += 1; continue
-                #print g['name'], genes[j]['name']
+                if j in used_genes or genes[j]['type'] != g['type']: 
+                    j += 1
+                    continue
+
                 minstart = g['start']
                 maxstop = max(new_stop, genes[j]['end'])
                 maxstart = genes[j]['start']
@@ -99,17 +101,12 @@ def merge_overlapping(new_genes, min_overlap, min_pct_coverage):
                     j += 1
                     continue
                 new_stop = maxstop
-                #print >>dbg, genes[j]
                 used_genes.update([j])
-                # blast doesnt like looong names.
-                #if len(matches) < 64:
-                    #    matches += MATCH_JOIN + genes[j]['attrs']['match']
+
                 j += 1
                 merged += 1
-            #print >>dbg,""
           
             g['end'] = new_stop
-            #g['attrs']['match'] = matches[:64]
             fix_name(g)
             assert len(g['accn']) <= 80, (len(g['accn']), g)
 
@@ -130,6 +127,7 @@ def fix_name(g):
     {'start': 2, 'chr': 'chr3', 'name': 'at2g26540_2_3', 'type': 'CDS', 'end': 3, 'strand': '+', }
     
     `"""
+    if g['type'] == 'CDS': return g['accn']
     new_name = g['accn']
     new_name = new_name.rstrip(string.digits).rstrip("_").rstrip(string.digits) + "%i_%i"
     new_name %= (g['start'], g['end'])
@@ -366,7 +364,7 @@ def grouper(blast_file):
     g = collections.defaultdict(dict)
     for sline in open(blast_file):
         b = BlastLine(sline)
-        # this removes low-copy, transposons (length > 200, percent_id > 98)
+        # this removes low-copy transposons (length > 200, percent_id > 98)
         if b.pctid > 98.0 and b.hitlen > 200: continue
         if not b.subject in g[b.query]: g[b.query][b.subject] = []
         g[b.query][b.subject].append(b)
