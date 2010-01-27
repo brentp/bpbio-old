@@ -100,7 +100,6 @@ def main(flat_file, fasta_file, inverse=False):
         return False
 
     flat = Flat(flat_file, fasta_file)
-    #gff = gtpym.FeatureIndexMemory(gff_file)
     fasta = Fasta(fasta_file)
 
 
