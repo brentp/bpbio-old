@@ -90,7 +90,7 @@ def mask_seq_with_locs(sequence, locs, N):
         n_masked += end - start + 1
     return n_masked
 
-
+#TODO: use more flatfeatures stuff in here.
 def main(flat_file, fasta_file, inverse=False):
     genomic_masked, features_fasta = get_fastas(fasta_file)
 
@@ -167,7 +167,7 @@ def cleanup(*files):
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print >>sys.stderr, """\
-   usage: %s path/to.gff path/to.fasta [mask feature_types] --inverse
+   usage: %s path/to.flat path/to.fasta --inverse
 
         feature types can be a list of names like: CDS mRNA gene
         in which case, the first of those that is found will be used.
@@ -178,12 +178,12 @@ if __name__ == "__main__":
                 """ % sys.argv[0]
         sys.exit()
 
-    gff = sys.argv[1].rstrip()
+    flat = sys.argv[1].rstrip()
     fasta = sys.argv[2].rstrip()
 
     inverse = sys.argv[-1] == '--inverse'
     if len(sys.argv) > 3:
         mask_types = [x.strip() for x in sys.argv[3:]]
-        main(gff, fasta, mask_types, inverse)
+        main(flat, fasta, inverse)
     else:
-        main(gff, fasta, None, inverse)
+        main(flat, fasta, inverse)
