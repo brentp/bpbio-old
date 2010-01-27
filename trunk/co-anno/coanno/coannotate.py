@@ -56,13 +56,14 @@ def main(cfg_path):
 MIN_OVERLAP = 30
 MIN_PCT_COVERAGE = 0.40
 
-def merge_overlapping(new_genes, min_overlap, min_pct_coverage):
+def merge_overlapping(new_genes, min_overlap, min_pct_coverage, match_file):
     """
     require at least `overlap` basepairs worth of overlap
     >>> list(merge_overlapping({}, 30, 0.4))
     []
 
     """
+    match_fh = open(match_file, "w")
 
     merged = 0
     # since we have to back track sometimes
@@ -78,7 +79,7 @@ def merge_overlapping(new_genes, min_overlap, min_pct_coverage):
             # it was probably seen on the other strand.
             if i in used_genes: i += 1; j = i + 1; continue
             g = genes[i].copy()
-            #matches = g['attrs']['match']
+            matches = g.pop('match')
             new_stop = g['end']
             #print >>dbg, g
 
@@ -102,13 +103,15 @@ def merge_overlapping(new_genes, min_overlap, min_pct_coverage):
                     continue
                 new_stop = maxstop
                 used_genes.update([j])
-
+                matches += "," + genes[j].pop('match')
                 j += 1
                 merged += 1
           
             g['end'] = new_stop
             fix_name(g)
             assert len(g['accn']) <= 80, (len(g['accn']), g)
+
+            print >>match_fh, "%s\t%s" % (g['accn'], matches)
 
 
             yield g
@@ -161,7 +164,6 @@ def dispatch(cfg, flip=False):
     a_bnon_blast = bblast.get_blast_file(a, b, odir)
     a_b_blast = bblast.get_blast_file(afasta.replace(".fa", ".features.fa"),
                                       bfasta.replace(".fa", ".features.fa"), odir)
-    i = 0
     new_genes = collections.defaultdict(dict)
     aflat = Flat(cfg[akey]["flat"], cfg[akey]["fasta"])
     bflat = Flat(cfg[bkey]["flat"], cfg[bkey]["fasta"])
@@ -179,19 +181,56 @@ def dispatch(cfg, flip=False):
             new_genes[achr][n] = new_gene
     # TODO: merge overlapping. only need to check chr, start, stops. so
     # sortable without index.
+    match_file = "%s/missed_%s_from_%s.matches.txt" % (cfg['default']['out_dir'], 
+                                           cfg[bkey]['name'], 
+                                           cfg[akey]['name'])
     merged_genes = merge_overlapping(new_genes, cfg['default']['min_overlap'],
-                                     cfg['default']['min_pct_coverage'])
+                                     cfg['default']['min_pct_coverage'], match_file)
 
     merged_genes = exclude_genes_in_high_repeat_areas(merged_genes, bfasta)
-    for new_gene in merged_genes:
+    print >>out_fh, "\t".join(Flat.names)
+    for i, new_gene in enumerate(merged_genes):
         print >>out_fh, flat_to_str(new_gene)
-        i += 1
-    log.debug("created %i new features in %s" % (i, out_flat))
+    out_fh.close()
+    log.debug("created %i new features in %s. with matches written to %s." \
+                      % (i, out_flat, match_file))
 
+    merge_file = "%s.all.flat" % os.path.splitext(cfg[bkey]['flat'])[0]
+    log.debug("writing merged .flat file with new features to %s" % merge_file)
+    merge(bflat, Flat(out_flat), merge_file)
+
+
+def merge(main, missed, merge_file):
+    merge_fh = open(merge_file, "w")
+    cds_missed = missed[missed['ftype'] == 'CDS']
+    count = main.shape[0] + missed[missed['ftype'] != 'CDS'].shape[0]
+    new_rows = []
+    seen_accns = {}
+    for row_missed in cds_missed:
+        main_row = main[main['accn'] == row_missed['accn']][0]
+        locs = main_row['locs'] + row_missed['locs']
+        main_row['locs'].sort()
+        new_rows.append(main_row)
+        seen_accns[main_row['accn']] = True
+
+    for row in missed[missed['ftype'] != 'CDS']:
+        new_rows.append(row)
+    for row in (r for r in main if not r['accn'] in seen_accns):
+        new_rows.append(row)
+
+    def row_cmp(a, b):
+        return cmp(a['seqid'], b['seqid']) or cmp(a['start'], b['start'])
+
+    new_rows.sort(cmp=row_cmp)
+    print >>merge_fh, "\t".join(Flat.names)
+    for i, row in enumerate(new_rows):
+        row['id'] = i + 1
+        print >>merge_fh, Flat.row_string(row)
+    assert i + 1 == count, (i + 1, count)
 
 def flat_to_str(g):
     flat_to_str.id += 1
-    return "\t".join(map(str, (flat_to_str.id, g['seqid'], g['accn'], g['start'], g['end'], g['type'], "%s,%s" % (g['start'], g['end']))))
+    return "\t".join(map(str, (flat_to_str.id, g['seqid'], g['accn'], g['start'], g['end'], g['strand'], g['type'], "%s,%s" % (g['start'], g['end']))))
 
                      
 
@@ -328,31 +367,44 @@ def find_missed(sorg, qflat, sflat, q_snon_blast, q_s_blast,
 
                 feat = dict(accn=sname , start=sstart , end=sstop
                            , seqid=schr , type="gene"
-                           , strand= sstrand== 1 and "+" or "-")
+                           , strand= sstrand== 1 and "+" or "-", match=qfeat['accn'])
 
                 # check if it's inside an existing gene. in which case, 
                 # call it a cds and give the the same name as the parent.
                 try:
-                    parent = [s for s in sflat.get_features_in_region(feat['seqid'], feat['start'], feat['end'])] # if s.strand == feat['strand']]
+                    parents = [s for s in sflat.get_features_in_region(feat['seqid'], feat['start'], feat['end'])] # if s.strand == feat['strand']]
                 except:
                     # this seqid doesnt have any features.
                     assert sflat[sflat['seqid'] == feat['seqid']] == []
                     yield feat
                     continue
 
-                if len(parent) == 0:
+                if len(parents) == 0:
                     yield feat
                 else:
-                    parent = parent[0]
-                    # when doing self-self dont want to add an annotation based
-                    # on the same gene.
-                    if parent['accn'] == qfeat['accn']:
-                        continue
-                    feat['accn'] = parent["accn"]
-                    feat['type'] = 'CDS'
-                    feat['strand'] = parent['strand']
-                    #del feat['attrs']['match']
-                    yield feat
+                    for parent in parents:
+                        # when doing self-self dont want to add an annotation based
+                        # on the same gene.
+                        if parent['accn'] == qfeat['accn']:
+                            continue
+
+                        # here we see if it hit an already annotated CDS on another gene.
+                        # http://toxic/CoGe/GEvo.pl?prog=blastn;spike_len=0;accn1=Bradi1g00480;fid1=35400621;dsid1=40124;dsgid1=1607;chr1=Bd1;dr1up=10000;dr1down=10000;ref1=1;accn2=Sb01g000240;fid2=19610158;dsid2=34580;dsgid2=93;chr2=1;dr2up=10000;dr2down=10000;ref2=1;num_seqs=2;hsp_overlap_limit=0;hsp_size_limit=0
+                        do_break  = False
+                        for start, end in parent['locs']:
+                            l = end - start
+                            if start - 0.1 * l <= feat['start'] and end + 0.1 * l >= feat['end']:
+                                do_break = True
+                        if do_break: break
+
+
+                        feat['accn'] = parent["accn"]
+                        feat['type'] = 'CDS'
+                        # match
+                        feat['strand'] = parent['strand']
+                        #del feat['attrs']['match']
+                        yield feat
+                        break
 
                 
 
