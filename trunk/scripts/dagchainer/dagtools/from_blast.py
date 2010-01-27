@@ -1,22 +1,23 @@
 import sys
-import gtpym
 import operator
+sys.path.insert(0, "/opt/src/flatfeature")
+from flatfeature import Flat
 
-def to_order(gff, outfile):
-    seqids = sorted(gff.seqids)
+def to_order(flat, outfile):
+    seqids = sorted(flat.seqids)
     order = {}
     i = 0
     out = open(outfile, 'w')
     for seqid in seqids:
-        feats = sorted(gff.get_features_for_seqid(seqid), key=operator.attrgetter('start'))
+        feats = sorted(flat[flat['seqid'] ==seqid], key=operator.itemgetter('start'))
         for feat in feats:
-            order[feat.attribs["ID"]] = i
-            print >>out, feat.attribs["ID"]
+            order[feat["accn"]] = i
+            print >>out, feat['accn']
             i += 1
     out.close()
     return order
 
-def blast_to_dag(blast_file, query, subject, qgff_file, sgff_file, qdups,
+def blast_to_dag(blast_file, query, subject, qflat_file, sflat_file, qdups,
                  sdups, order, condense):
     """
     if order is true, we return the index of the gene, instead of the basepair position
@@ -26,12 +27,12 @@ def blast_to_dag(blast_file, query, subject, qgff_file, sgff_file, qdups,
     if sdups:
         sdups = frozenset(x.strip() for x in open(sdups))
 
-    qgff = gtpym.FeatureIndexMemory(qgff_file)
-    sgff = gtpym.FeatureIndexMemory(sgff_file)
+    qflat = Flat(qflat_file)
+    sflat = Flat(sflat_file)
 
     if order:
-        qorder = to_order(qgff, qgff_file + ".order")
-        sorder = to_order(sgff, sgff_file + ".order")
+        qorder = to_order(qflat, qflat_file + ".order")
+        sorder = to_order(sflat, sflat_file + ".order")
 
     qorg = query   + "_"
     sorg = subject + "_"
@@ -43,12 +44,12 @@ def blast_to_dag(blast_file, query, subject, qgff_file, sgff_file, qdups,
 
         if qdups is not None and line[0] in qdups: n_qdups += 1; continue
         if sdups is not None and line[1] in sdups: n_sdups += 1; continue
-        qfeat = qgff[line[0]]
-        sfeat = sgff[line[1]]
+        qfeat = qflat.accn(line[0])
+        sfeat = sflat.accn(line[1])
 
         if condense:
-            qname = qfeat.attribs["ID"]
-            sname = sfeat.attribs["ID"]
+            qname = qfeat["name"]
+            sname = sfeat["name"]
             key = qname + "@" + sname
             v = float(line[-2])
             if key in seen: 
@@ -60,16 +61,16 @@ def blast_to_dag(blast_file, query, subject, qgff_file, sgff_file, qdups,
                 seen[key] = v
         
         if order:
-            qo = qorder[qfeat.attribs["ID"]]
-            so = sorder[sfeat.attribs["ID"]]
+            qo = qorder[qfeat["name"]]
+            so = sorder[sfeat["name"]]
             print "\t".join(map(str, [
-                 qorg + qfeat.seqid, line[0], qo, qo,
-                 sorg + sfeat.seqid, line[1], so, so, line[-2]]))
+                 qorg + qfeat['seqid'], line[0], qo, qo,
+                 sorg + sfeat['seqid'], line[1], so, so, line[-2]]))
 
         else:
             print "\t".join(map(str, [
-                 qorg + qfeat.seqid, line[0], qfeat.start, qfeat.end
-                ,sorg + sfeat.seqid, line[1], sfeat.start, sfeat.end, line[-2]]))
+                 qorg + qfeat['seqid'], line[0], qfeat['start'], qfeat['end']
+                ,sorg + sfeat['seqid'], line[1], sfeat['start'], sfeat['end'], line[-2]]))
 
     if qdups:
         print >>sys.stderr, "removed %i dups from query  " % n_qdups
@@ -84,9 +85,6 @@ def genomic_blast_to_dag(blast_file, merge_at=10000):
 
     for line in open(blast_file):
         bline = line.split("\t")
-
-
-
 
 def main(args):
     from optparse import OptionParser
@@ -113,9 +111,9 @@ def main(args):
     parser.add_option("-o", dest="order", action="store_true", default=False, 
                       help="if this is true, the relative positions are sent "
                       "to the dag file, rather than the basepair positions.")
-    parser.add_option("--qgff",   dest="qgff", 
-                      help="the path of the query gff")
-    parser.add_option("--sgff", dest="sgff", 
+    parser.add_option("--qflat",   dest="qflat", 
+                      help="the path of the query flat")
+    parser.add_option("--sflat", dest="sflat", 
                       help="the path of the subject subject")
     parser.add_option("--query_dups", dest="query_dups", 
                   help="file containing list of query dups", default=None)
@@ -128,7 +126,7 @@ def main(args):
     if not options.blast_file:
         sys.exit(parser.print_help())
     blast_to_dag(options.blast_file, options.query, options.subject,
-                 options.qgff, options.sgff, 
+                 options.qflat, options.sflat, 
                  options.query_dups, options.subject_dups, 
                  options.order, options.condense)
 
