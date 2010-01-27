@@ -2,7 +2,6 @@ import simplejson
 import logging
 import bblast
 import collections
-from gtpym import FeatureIndexMemory
 import operator
 import os
 import sys
@@ -10,18 +9,9 @@ import string
 from biostuff import BlastLine
 from pyfasta import Fasta
 import mask_features as mf
+sys.path.insert(0, "/opt/src/flatfeature")
+from flatfeature import Flat
 
-
-def gff_feat_to_str(f):
-    r"""
-    >>> f = dict(name='name', start=2, stop=3, strand='+', chr='chr3', 
-    ...           type='CDS', attrs={'match':'amatch', 'ID': 'at2g26540'})
-    >>> gff_feat_to_str(f)
-    'chr3\tucb\tCDS\t2\t3\t.\t+\t.\tID=at2g26540;match=amatch'
-    """
-    attrs = ";".join(["%s=%s" % (k,v) for k, v in f['attrs'].iteritems()])
-    strand = f['strand'] in (1, '1', '+') and '+' or '-'
-    return "\t".join(map(str, (f['chr'], 'ucb', f.get('type', 'gene'), f['start'], f['stop'], ".", strand, ".", attrs)))
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -32,7 +22,7 @@ MATCH_JOIN = "#"
 
 def run_mask(cfg):
     for g in ("genome_a", "genome_b"):
-        mf.main(cfg[g]["gff"], cfg[g]["fasta"], cfg["default"]["mask_order"])
+        mf.main(cfg[g]["flat"], cfg[g]["fasta"])
         log.debug("MASKED: %s" % cfg[g]['name'])
 
 def update_cfg(cfg):
@@ -88,21 +78,21 @@ def merge_overlapping(new_genes, min_overlap, min_pct_coverage):
             # it was probably seen on the other strand.
             if i in used_genes: i += 1; j = i + 1; continue
             g = genes[i].copy()
-            matches = g['attrs']['match']
-            new_stop = g['stop']
+            #matches = g['attrs']['match']
+            new_stop = g['end']
             #print >>dbg, g
 
             last_gene = None # keep track of gene on other strand.
 
             #  PARAMETER: require 30bp overlap.
-            while j < len(genes) and g['stop'] > genes[j]['start'] + min_overlap:
+            while j < len(genes) and g['end'] > genes[j]['start'] + min_overlap:
                 # can only merge genes with genes, and cds with cds.
                 if j in used_genes or genes[j]['type'] != g['type']: j += 1; continue
                 #print g['name'], genes[j]['name']
                 minstart = g['start']
-                maxstop = max(new_stop, genes[j]['stop'])
+                maxstop = max(new_stop, genes[j]['end'])
                 maxstart = genes[j]['start']
-                minstop = min(new_stop, genes[j]['stop'])
+                minstop = min(new_stop, genes[j]['end'])
                 coverage = (minstop - maxstart) / (1.0 * maxstop - minstart)
                 if genes[j]['strand'] != g['strand'] and coverage < min_pct_coverage:
                     last_gene = j
@@ -112,16 +102,16 @@ def merge_overlapping(new_genes, min_overlap, min_pct_coverage):
                 #print >>dbg, genes[j]
                 used_genes.update([j])
                 # blast doesnt like looong names.
-                if len(matches) < 64:
-                    matches += MATCH_JOIN + genes[j]['attrs']['match']
+                #if len(matches) < 64:
+                    #    matches += MATCH_JOIN + genes[j]['attrs']['match']
                 j += 1
                 merged += 1
             #print >>dbg,""
           
-            g['stop'] = new_stop
-            g['attrs']['match'] = matches[:64]
+            g['end'] = new_stop
+            #g['attrs']['match'] = matches[:64]
             fix_name(g)
-            assert len(g['name']) <= 80, (len(g['name']), g)
+            assert len(g['accn']) <= 80, (len(g['accn']), g)
 
 
             yield g
@@ -133,17 +123,17 @@ def merge_overlapping(new_genes, min_overlap, min_pct_coverage):
 def fix_name(g):
     """the name is like: org_chr_start_stop but we may have changed start, stop
 
-    >>> f = dict(name='name', start=2, stop=3, strand='+', chr='chr3', 
+    >>> f = dict(name='name', start=2, end=3, strand='+', chr='chr3', 
     ...           type='CDS', attrs={'match':'amatch', 'ID': 'at2g26540_4_5'})
     >>> fix_name(f)
     >>> f
-    {'start': 2, 'chr': 'chr3', 'name': 'at2g26540_2_3', 'type': 'CDS', 'stop': 3, 'strand': '+', 'attrs': {'rname': 'at2g26540_2_3', 'ID': 'at2g26540_2_3', 'match': 'amatch'}}
+    {'start': 2, 'chr': 'chr3', 'name': 'at2g26540_2_3', 'type': 'CDS', 'end': 3, 'strand': '+', }
     
     `"""
-    new_name = g['attrs']['ID']
+    new_name = g['accn']
     new_name = new_name.rstrip(string.digits).rstrip("_").rstrip(string.digits) + "%i_%i"
-    new_name %= (g['start'], g['stop'])
-    g['name'] = g['attrs']['rname'] = g['attrs']['ID'] = new_name
+    new_name %= (g['start'], g['end'])
+    g['accn'] = new_name
 
 def dispatch(cfg, flip=False):
     """
@@ -164,9 +154,9 @@ def dispatch(cfg, flip=False):
     min_len = cfg["default"]["min_len"]
     min_pct_coverage = cfg["default"]["min_pct_coverage"]
 
-    out_gff = "missed_%s_from_%s.gff" % (cfg[bkey]["name"], cfg[akey]["name"])
-    out_gff = os.path.join(cfg["default"]["out_dir"], out_gff)
-    out_fh = open(out_gff, "w")
+    out_flat = "missed_%s_from_%s.flat" % (cfg[bkey]["name"], cfg[akey]["name"])
+    out_flat = os.path.join(cfg["default"]["out_dir"], out_flat)
+    out_fh = open(out_flat, "w")
     
 
     a, b = fastas_for_features_vs_masked_genomic(afasta, bfasta)
@@ -175,14 +165,18 @@ def dispatch(cfg, flip=False):
                                       bfasta.replace(".fa", ".features.fa"), odir)
     i = 0
     new_genes = collections.defaultdict(dict)
+    aflat = Flat(cfg[akey]["flat"], cfg[akey]["fasta"])
+    bflat = Flat(cfg[bkey]["flat"], cfg[bkey]["fasta"])
+    flat_to_str.id = bflat[-1]['id']
+
     for new_gene in find_missed(cfg[bkey]["name"],
-                            cfg[akey]["gff"], cfg[bkey]["gff"],
+                            aflat, bflat,
                             a_bnon_blast, a_b_blast, min_pct_coverage, flip=flip, min_len=min_len):
         #if new_gene['name'] in seen: continue
-        n, achr = new_gene['name'], new_gene['chr']
+        n, achr = new_gene['accn'], new_gene['seqid']
         # found it 2x, add the match to the list.
         if n in new_genes[achr]:
-            new_genes[achr][n]['attrs']['match'] += MATCH_JOIN + new_gene['attrs']['match']
+            continue
         else:
             new_genes[achr][n] = new_gene
     # TODO: merge overlapping. only need to check chr, start, stops. so
@@ -191,12 +185,17 @@ def dispatch(cfg, flip=False):
                                      cfg['default']['min_pct_coverage'])
 
     merged_genes = exclude_genes_in_high_repeat_areas(merged_genes, bfasta)
-    print >>out_fh, "##gff-version 3"
     for new_gene in merged_genes:
-        print >>out_fh, gff_feat_to_str(new_gene)
+        print >>out_fh, flat_to_str(new_gene)
         i += 1
-    log.debug("created %i new features in %s" % (i, out_gff))
+    log.debug("created %i new features in %s" % (i, out_flat))
 
+
+def flat_to_str(g):
+    flat_to_str.id += 1
+    return "\t".join(map(str, (flat_to_str.id, g['seqid'], g['accn'], g['start'], g['end'], g['type'], "%s,%s" % (g['start'], g['end']))))
+
+                     
 
 def exclude_genes_in_high_repeat_areas(merged_genes, bfasta):
     #print "FASTA:", afasta
@@ -205,7 +204,7 @@ def exclude_genes_in_high_repeat_areas(merged_genes, bfasta):
     skipped = 0
     for gene in merged_genes:
         # get the total sequence length.
-        seq = str(f[gene['chr']][gene['start']:gene['stop']])
+        seq = str(f[gene['seqid']][gene['start']:gene['end']])
         tot = len(seq)
         # and the lenght of real sequence.
         seq = seq.upper().replace('N', '').replace('X','')
@@ -275,16 +274,16 @@ def partition(slist, max_dist=1000):
     lists.append(current_list)
     return lists
 
-def find_missed(sorg, qgff_file, sgff_file, q_snon_blast, q_s_blast,
+def find_missed(sorg, qflat, sflat, q_snon_blast, q_s_blast,
                 min_pct_coverage, min_len=30, flip=False):
     """ e.g.:
-        >>> find_missed("papaya", "grape.gff", "papaya.gff",
+        >>> find_missed("papaya", "grape.flat", "papaya.flat",
         ...         "grape.features_vs_papaya.genomic.masked.blast",
         ...         "grape.features_vs_papaya.features.blast", 0.30) # doctest: +ELLIPSIS
         <generator object find_missed at ...>
 
     to find papaya mised exons. and:
-        >>> find_missed("grape", "papaya.gff", "grape.gff",
+        >>> find_missed("grape", "papaya.flat", "grape.flat",
         ...         "papaya.features_vs_grape.genomic.masked.blast",
         ...         "grape.features_vs_papaya.features.blast", 0.30, flip=True) # doctest: +ELLIPSIS
         <generator object find_missed at ...>
@@ -296,24 +295,17 @@ def find_missed(sorg, qgff_file, sgff_file, q_snon_blast, q_s_blast,
     total area. so hits like [105, 120], [190, 205] only cover 
        15 + 15 / (205 - 105) = 30%
     """
-    qgff = FeatureIndexMemory(qgff_file)
-    sgff = FeatureIndexMemory(sgff_file)
 
     # grouped_by_q has all the subject genomic hits mapped to the query feature.
     # and the subject start, stop are chromosomal positions.
-    name = sorg + "_%(chr)s_%(start)i_%(stop)i"
+    name = sorg + "_%(seqid)s_%(start)i_%(end)i"
     grouped_by_q = grouper(q_snon_blast)
     #print len(grouped_by_q)
 
 
     for qname, sdict in sorted(grouped_by_q.iteritems()):
-        try:
-            qfeat = qgff[qname]
-        except:
-            print >>sys.stderr, "\n", qname, sdict, qgff_file, sgff_file, "\n"
-            raise
-        qstrand = qfeat.strand == '-' and -1 or 1
-
+        qfeat = qflat.accn(qname)
+        qstrand = qfeat['strand'] == '-' and -1 or 1
 
         for schr, big_slist in sorted(sdict.iteritems()):
             slists = partition(big_slist)
@@ -334,44 +326,34 @@ def find_missed(sorg, qgff_file, sgff_file, q_snon_blast, q_s_blast,
                 # the hsps have to not be toooooo sparse
                 if cover / (sstop - sstart) < min_pct_coverage: continue
                 sstrand *= qstrand
-                sname = name % dict(chr=schr, start=sstart, stop=sstop)
+                sname = name % dict(seqid=schr, start=sstart, end=sstop)
 
-
-
-                feat = dict(name=sname , start=sstart , stop=sstop
-                           , chr=schr , type="gene"
-                           , strand= sstrand== 1 and "+" or "-"
-                           , attrs={"match": qfeat.get_attribute('ID'), "ID": sname,
-                               'rname':sname})
+                feat = dict(accn=sname , start=sstart , end=sstop
+                           , seqid=schr , type="gene"
+                           , strand= sstrand== 1 and "+" or "-")
 
                 # check if it's inside an existing gene. in which case, 
                 # call it a cds and give the the same name as the parent.
                 try:
-                    parent = [s for s in sgff.get_features_for_range(feat['start'],
-                        feat['stop'], feat['chr'])] # if s.strand == feat['strand']]
+                    parent = [s for s in sflat.get_features_in_region(feat['seqid'], feat['start'], feat['end'])] # if s.strand == feat['strand']]
                 except:
                     # this seqid doesnt have any features.
-                    assert sgff.get_features_for_seqid(feat['chr']) == []
+                    assert sflat[sflat['seqid'] == feat['seqid']] == []
                     yield feat
                     continue
 
                 if len(parent) == 0:
                     yield feat
                 else:
-                    # it overlaps 2 of them, in between 2 genes. what to do?
-                    # just use the first 1 for now.
-                    #assert len(parent) == 1, (parent, parent[0].attribs["ID"],
-                    #        parent[1].attribs["ID"])
                     parent = parent[0]
                     # when doing self-self dont want to add an annotation based
                     # on the same gene.
-                    if parent.get_attribute("ID") == qfeat.get_attribute("ID"):
+                    if parent['accn'] == qfeat['accn']:
                         continue
-                    feat['name'] = feat['attrs']['rname'] = feat["attrs"]["Parent"] = parent.get_attribute("ID")
+                    feat['accn'] = parent["accn"]
                     feat['type'] = 'CDS'
-                    feat['strand'] = parent.strand
+                    feat['strand'] = parent['strand']
                     #del feat['attrs']['match']
-                    feat['attrs']['anno'] = "ME" 
                     yield feat
 
                 

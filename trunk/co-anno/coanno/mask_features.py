@@ -1,8 +1,9 @@
 from pyfasta import Fasta
 import os
 import sys
+sys.path.insert(0, "/opt/src/flatfeature")
+from flatfeature import Flat
 import numpy as np
-import gtpym
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -23,16 +24,16 @@ def is_up_to_date(m, g, f):
     return mtime > os.stat(g).st_mtime \
             and mtime > os.stat(f).st_mtime
 
-def get_fastas(fasta_file, mask_types):
+def get_fastas(fasta_file, genes=False):
     """
-    >>> get_fastas('a.fasta', ('CDS', 'gene'))
+    >>> get_fastas('a.fasta')
     ('a.genomic.masked.fasta', 'a.features.fasta')
 
-    >>> get_fastas('a.fasta', [])
+    >>> get_fastas('a.fasta', genes=True)
     ('a.genomic.masked.genes.fasta', False)
     """
 
-    if mask_types:
+    if not genes:
         genomic_masked = fasta_file.replace('.fa', '.genomic.masked.fa')
         features_fasta = fasta_file.replace('.fa', '.features.fa')
     else:
@@ -41,7 +42,7 @@ def get_fastas(fasta_file, mask_types):
 
     return genomic_masked, features_fasta
 
-def write_feature(fh, feat, fasta, seen_ids, mask_types):
+def write_feature(fh, feat, fasta, seen_ids):
     r"""
     >>> from cStringIO import StringIO
     >>> fh = StringIO()
@@ -53,13 +54,12 @@ def write_feature(fh, feat, fasta, seen_ids, mask_types):
     '>some_id\nCTC\n'
 
     """
-    fname = feat.get_attribute("ID") or feat.get_attribute('rname')
-    assert not fname in seen_ids, (fname, "used more than 1X", feat)
-    assert fname is not None, (feat, feat.type, feat.attribs )
-    seen_ids[feat] = None
-    fh.write('>' + fname + '\n')
-    fdict = {'chr': feat.seqid, 'start': feat.start, 'stop': feat.end, 'strand': feat.strand }
-    fh.write(fasta.sequence(fdict , exon_keys=mask_types) + "\n")
+    name = feat['accn']
+    assert not name in seen_ids, (name, "used more than 1X", feat)
+    seen_ids[name] = None
+    fh.write('>' + name + '\n')
+    fdict = {'chr': feat['seqid'], 'start': feat['start'], 'stop': feat['end'], 'strand': feat['strand'] }
+    fh.write(fasta.sequence(fdict) + "\n")
 
 
 def check_exists(f, raw_input=raw_input):
@@ -75,57 +75,32 @@ def check_exists(f, raw_input=raw_input):
 
 class NotMaskedException(Exception): pass
 
-def mask_seq_with_types(sequence, mask_types, feat, N):
+def mask_seq_with_locs(sequence, locs, N):
     """
     >>> s = np.array('AAAAAAAAAAAAAAAAAAAAAA', dtype='c')
     >>> N = np.array('N', dtype='|S1')
-    >>> mask_types = ['CDS']
-    >>> feat = gtpym.FeatureNode('chr2', 'CDS', 4, 8, '+')
-    >>> mask_seq_with_types(s, mask_types, feat, N)
-    4L
-
-    >>> s.tostring()
-    'AAANNNNNAAAAAAAAAAAAAA'
-
-    >>> s = np.array('AAAAAAAAAAAAAAAAAAAAAA', dtype='c')
-    >>> mask_seq_with_types(s, None, feat, N)
-    4L
 
     >>> s.tostring()
     'AAANNNNNAAAAAAAAAAAAAA'
 
     """
-    feats_by_type = gtpym.FeatureIndexMemory.by_types(feat)
-
     n_masked = 0
-    if mask_types:
-        for ftype in mask_types:
-            if not ftype in feats_by_type: continue
-            locs = feats_by_type[ftype]
-
-            for loc in locs:
-                sequence[loc.start - 1: loc.end] = N
-                n_masked += (loc.end - loc.start)
-            return n_masked
-
-        else: # not masked
-            raise NotMaskedException
-    else:
-        # mask the whole thing.
-        sequence[feat.start - 1: feat.end] = N
-        return (feat.end - feat.start)
+    for start, end in locs:
+        sequence[start - 1: end] = N
+        n_masked += end - start + 1
+    return n_masked
 
 
-def main(gff_file, fasta_file, mask_types=('CDS', 'mRNA', 'MIR', 'gene'),
-                                            inverse=False):
-    genomic_masked, features_fasta = get_fastas(fasta_file, mask_types)
+def main(flat_file, fasta_file, inverse=False):
+    genomic_masked, features_fasta = get_fastas(fasta_file)
 
-    if is_up_to_date(genomic_masked, gff_file, fasta_file) \
-            and is_up_to_date(features_fasta, gff_file, fasta_file):
+    if is_up_to_date(genomic_masked, flat_file, fasta_file) \
+            and is_up_to_date(features_fasta, flat_file, fasta_file):
         log.debug("%s is up-to-date." % (genomic_masked, ))
         return False
 
-    gff = gtpym.FeatureIndexMemory(gff_file)
+    flat = Flat(flat_file, fasta_file)
+    #gff = gtpym.FeatureIndexMemory(gff_file)
     fasta = Fasta(fasta_file)
 
 
@@ -146,13 +121,13 @@ def main(gff_file, fasta_file, mask_types=('CDS', 'mRNA', 'MIR', 'gene'),
             log.debug("beginning masking for %i sequences" % (len(fkeys,)))
 
         for achr in fkeys:
-            features = gff.get_features_for_seqid(achr)
+            features = flat[flat['seqid'] == achr]
             sequence = np.array(fasta[achr])
 
             tot_masked = 0
             for feat in features:
                 try:
-                    tot_masked += mask_seq_with_types(sequence, mask_types, feat, N)
+                    tot_masked += mask_seq_with_locs(sequence, feat['locs'], N)
                 except NotMaskedException:
                     print >>sys.stderr, feat
                     cleanup(genomic_masked, features_fasta)
@@ -161,7 +136,7 @@ def main(gff_file, fasta_file, mask_types=('CDS', 'mRNA', 'MIR', 'gene'),
 
 
                 if features_fasta:
-                    write_feature(features_fasta, feat, fasta, seen_ids, mask_types)
+                    write_feature(features_fasta, feat, fasta, seen_ids)
 
             if inverse:
                 nseq = np.array(fasta[achr])
