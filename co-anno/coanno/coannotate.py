@@ -407,9 +407,8 @@ def find_missed(sorg, qflat, sflat, q_snon_blast, q_s_blast,
                         # match
                         feat['strand'] = parent['strand']
                         #del feat['attrs']['match']
-                        yield feat
                         break
-
+                    yield feat
                 
 
 def grouper(blast_file):
