@@ -13,12 +13,11 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from cStringIO import StringIO
 import numpy as np
 
-path = "/tmp/GSE/"
+path = os.path.dirname(__file__)
 histones = {}
 for ichr in range(1, 6):
     schr = str(ichr)
-    histones[schr] = np.memmap(os.path.join(path, \
-                               'histone.%s.bin' % schr), dtype=np.float32, mode='r')
+    histones[schr] = np.memmap(os.path.join(path, 'histone.%s.bin') % schr, dtype=np.float32, mode='r')
 
 colors = [(1, 0, 0), (1, 1, 0), (0, 0, 1)]
 
@@ -54,7 +53,7 @@ def application(env, start_response):
         ax.fill_between(
             np.arange(xmin1 - 1, xmax), 
             np.zeros_like(hist),
-            hist, facecolor=c, edgecolor='none', alpha=0.5) #, lw=0.8)
+            hist, facecolor=c, edgecolor='none', alpha=0.4) #, lw=0.8)
 
     io = StringIO()
     f.savefig(io, format='png', dpi=dpi)
