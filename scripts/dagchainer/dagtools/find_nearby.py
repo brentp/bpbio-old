@@ -52,7 +52,11 @@ def find_nearby(dist, diags, all_hits):
 
         d = DagLine(sline)
         chrs = (d.a_seqid, d.b_seqid)
-        seen[(d.a_accn, d.b_accn)] = None
+        if not (d.a_accn, d.b_accn) in seen:
+            seen[(d.a_accn, d.b_accn)] = None
+            current_lines.append(sline.rstrip())
+        else:
+            continue
 
         tree = trees[chrs]
         info_lines = lines[chrs]
@@ -63,7 +67,6 @@ def find_nearby(dist, diags, all_hits):
         # values set to tree.n are extras.
         idxs = idxs[idxs != tree.n]
 
-        current_lines.append(sline.rstrip())
         for i in idxs:
             d, iline = info_lines[i]
             ikey = (d.a_accn, d.b_accn)
