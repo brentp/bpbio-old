@@ -30,6 +30,13 @@ def blast_to_dag(blast_file, query, subject, qflat_file, sflat_file, qdups,
     qflat = Flat(qflat_file)
     sflat = Flat(sflat_file)
 
+    qflat_d = {}
+    for q in qflat:
+        qflat_d[q["accn"]] = q
+    sflat_d = {}
+    for s in sflat:
+        sflat_d[s["accn"]] = s
+
     if order:
         qorder = to_order(qflat, qflat_file + ".order")
         sorder = to_order(sflat, sflat_file + ".order")
@@ -39,38 +46,40 @@ def blast_to_dag(blast_file, query, subject, qflat_file, sflat_file, qdups,
     seen = {}
     n_qdups = 0
     n_sdups = 0
-    for line in open(blast_file):
-        line = line.split("\t")
-
-        if qdups is not None and line[0] in qdups: n_qdups += 1; continue
-        if sdups is not None and line[1] in sdups: n_sdups += 1; continue
-        qfeat = qflat.accn(line[0])
-        sfeat = sflat.accn(line[1])
-
-        if condense:
-            qname = qfeat["name"]
-            sname = sfeat["name"]
+    if condense:
+        for line in open(blast_file):
+            line = line.split("\t")
+            qname, sname = line[:2]
             key = qname + "@" + sname
             v = float(line[-2])
-            if key in seen: 
-                if v > seen[key]:
-                    continue
-                else:
-                    seen[key] = v
-            else:
+            if not key in seen or v < seen[key]: 
                 seen[key] = v
+
+    for line in open(blast_file):
+        line = line.split("\t")
+        qname, sname = line[:2]
+
+        if qdups is not None and qname in qdups: n_qdups += 1; continue
+        if sdups is not None and sname in sdups: n_sdups += 1; continue
+        qfeat = qflat_d[qname]
+        sfeat = sflat_d[sname]
+
+        if condense:
+            key = qname + "@" + sname
+            v = float(line[-2])
+            if seen[key] > v: continue
         
         if order:
-            qo = qorder[qfeat["name"]]
-            so = sorder[sfeat["name"]]
+            qo = qorder[qname]
+            so = sorder[sname]
             print "\t".join(map(str, [
-                 qorg + qfeat['seqid'], line[0], qo, qo,
-                 sorg + sfeat['seqid'], line[1], so, so, line[-2]]))
+                 qorg + qfeat['seqid'], qname, qo, qo,
+                 sorg + sfeat['seqid'], sname, so, so, line[-2]]))
 
         else:
             print "\t".join(map(str, [
-                 qorg + qfeat['seqid'], line[0], qfeat['start'], qfeat['end']
-                ,sorg + sfeat['seqid'], line[1], sfeat['start'], sfeat['end'], line[-2]]))
+                 qorg + qfeat['seqid'], qname, qfeat['start'], qfeat['end']
+                ,sorg + sfeat['seqid'], sname, sfeat['start'], sfeat['end'], line[-2]]))
 
     if qdups:
         print >>sys.stderr, "removed %i dups from query  " % n_qdups
