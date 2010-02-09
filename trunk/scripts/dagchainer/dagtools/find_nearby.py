@@ -37,9 +37,8 @@ def find_nearby(dist, diags, all_hits):
     current_lines = [] 
 
     for sline in open(diags):
-        # TODO: dont print this line, save the total number
         if sline[0] == '#': 
-            if current_lines != []:
+            if len(current_lines) > 1:
                 header = current_lines[0].split("\t")
                 # update the gene count.
                 header[-1] = str(len(current_lines) - 1)
