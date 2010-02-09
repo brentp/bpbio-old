@@ -31,6 +31,7 @@ def read_dag_to_tree(all_hits):
 def find_nearby(dist, diags, all_hits):
     """empty docstring"""
     trees, lines = read_dag_to_tree(all_hits)
+    global_seen = {}
     seen = {}
     # need to save these and print at the end
     # of a block in oder to know the nubmer of total genes.
@@ -38,6 +39,7 @@ def find_nearby(dist, diags, all_hits):
 
     for sline in open(diags):
         if sline[0] == '#': 
+            seen = {}
             if len(current_lines) > 1:
                 header = current_lines[0].split("\t")
                 # update the gene count.
@@ -51,6 +53,8 @@ def find_nearby(dist, diags, all_hits):
 
         d = DagLine(sline)
         chrs = (d.a_seqid, d.b_seqid)
+        global_seen[(d.a_accn, d.b_accn)] = None
+
         if not (d.a_accn, d.b_accn) in seen:
             seen[(d.a_accn, d.b_accn)] = None
             current_lines.append(sline.rstrip())
@@ -69,6 +73,7 @@ def find_nearby(dist, diags, all_hits):
         for i in idxs:
             d, iline = info_lines[i]
             ikey = (d.a_accn, d.b_accn)
+            if ikey in global_seen: continue
             if ikey in seen: continue
             current_lines.append(iline.rstrip())
             seen[ikey] = True
