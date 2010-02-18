@@ -20,9 +20,15 @@ def read_dag_to_tree(all_hits):
     for sline in open(all_hits):
         if sline[0] == '#': continue
         d = DagLine(sline)
-        chrs = (d.a_seqid, d.b_seqid)
-        trees[chrs].append((d.a_start, d.b_start))
-        lines[chrs].append((d, sline))
+
+        if d.a_seqid < d.b_seqid:
+            chrs = (d.a_seqid, d.b_seqid)
+            trees[chrs].append((d.a_start, d.b_start))
+            lines[chrs].append(d)
+        else:
+            chrs = (d.b_seqid, d.a_seqid)
+            trees[chrs].append((d.b_start, d.a_start))
+            lines[chrs].append(d)
 
     for chrs in trees:
         trees[chrs] = cKDTree(np.array(trees[chrs]), leafsize=16)
@@ -60,8 +66,11 @@ def find_nearby(dist, diags, all_hits):
             current_lines.append(sline.rstrip())
         else:
             continue
-
-        tree = trees[chrs]
+        try:
+            tree = trees[chrs]
+        except:
+            print >>sys.stderr, trees.keys()[:10]
+            raise
         info_lines = lines[chrs]
         
         q, s = d.a_start, d.b_start
@@ -71,11 +80,11 @@ def find_nearby(dist, diags, all_hits):
         idxs = idxs[idxs != tree.n]
 
         for i in idxs:
-            d, iline = info_lines[i]
+            d = info_lines[i]
             ikey = (d.a_accn, d.b_accn)
             if ikey in global_seen: continue
             if ikey in seen: continue
-            current_lines.append(iline.rstrip())
+            current_lines.append(str(d))
             seen[ikey] = True
         
 
