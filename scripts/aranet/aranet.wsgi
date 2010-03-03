@@ -24,14 +24,7 @@ def get_pair(pair):
     assert len(pair) == 2, pair
     return pair, idxs.get(pair[0], -1), idxs.get(pair[1], -1)
 
-
-class form(object):
-    def GET(self, data=None):
-        web.header('Content-type', 'text/html')
-        form = """
-        <form method="POST" action=''>
-        <p>enter pairs below:</p>
-        <textarea name="pairs" rows="30" cols="20">
+DEFAULT="""\
 AT1G79010,ATMG00270
 AT1G16700,ATMG00270
 AT2G20580,AT4G19006
@@ -41,17 +34,26 @@ ATMG00900,ATMG00960
 AT2G07771,ATMG00960
 AT2G07681,ATMG00960
 AT4G19006,AT5G64760
-        </textarea>
+"""
+
+class form(object):
+    def GET(self, form_data=DEFAULT, data=None):
+        web.header('Content-type', 'text/html')
+        form = """
+        <form method="POST" action=''>
+        <p>enter pairs below:</p>
+        <textarea name="pairs" rows="30" cols="20">%s</textarea>
         <input type="submit" name="submit" />
         </form>
-        """
+        """ % form_data
         if data:
             form += "<textarea cols='50' rows='%i'>%s</textarea>" % (max(len(data), 50), "\n".join(data))
         return form
 
     def POST(self):
         web.header('Content-type', 'text/plain')
-        input_pairs = web.input().pairs.strip().split("\r\n")
+        pairs_txt  = web.input().pairs.strip()
+        input_pairs = pairs_txt.split("\r\n")
         xs = []
         ys = []
         pairs = []
@@ -68,10 +70,10 @@ AT4G19006,AT5G64760
             if bad:
                 data.append( "%s,accn-not-found" % pair)
             elif val == 0:
-                data.append( "%s,nodata-for-pair" % (pair, val))
+                data.append( "%s,nodata-for-pair" % (pair, ))
             else:
                 data.append( "%s,%.5f" % (pair, val))
-        return self.GET(data)
+        return self.GET(form_data=pairs_txt, data=data)
 
 
 class query(object):
