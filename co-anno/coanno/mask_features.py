@@ -103,7 +103,7 @@ def main(flat_file, fasta_file, inverse=False):
     fasta = Fasta(fasta_file)
 
 
-    N = np.array('@' if inverse else 'N', dtype='c')
+    N = np.array('@' if inverse else 'N', dtype='S1').astype('c')
     if inverse:
         genomic_masked = genomic_masked.replace('genomic.masked', 'genomic.nonfeat.masked')
 
