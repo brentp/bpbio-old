@@ -5,8 +5,8 @@ import sys
 def get_names(directory):
     f = os.listdir(directory)[0]
     accns = [f.upper()] + [line.split("\t")[0].upper() for line in open(os.path.join(directory, f))]
-    accns.sort()
-    return dict((accn.replace("_", ""), i) for i, accn in enumerate(accns))
+    accns = sorted(a.replace("_", "") for a in accns)
+    return dict((accn, i) for i, accn in enumerate(accns))
 
 def fill_array(directory, names2idx, arr):
     L = len(names2idx)

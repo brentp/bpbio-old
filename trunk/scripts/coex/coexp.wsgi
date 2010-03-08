@@ -16,7 +16,6 @@ coexp = np.memmap(path + '/coexp.bin', dtype=np.float32,
 
 def get_pair(pair):
     pair = pair.strip()
-    web.debug(pair)
     if not pair: return None, None, None
     if "," in pair: sep = ","
     elif "\t" in pair: sep = "\t"
@@ -24,6 +23,16 @@ def get_pair(pair):
     pair = [p.strip().upper().replace("_", "") for p in pair.split(sep)]
     assert len(pair) == 2, pair
     return pair, idxs.get(pair[0], -1), idxs.get(pair[1], -1)
+
+REFERENCE = """<p>
+<a href="http://nar.oxfordjournals.org/cgi/content/full/37/suppl_1/D987">Reference</a>
+<p>
+    methods: <a href="http://atted.jp/help/coex_cal.shtml">coexpression</a> and <a href="http://atted.jp/help/mr.shtml">mutual rank</a>
+<p>
+(the re-scaled value reported here is (1 - MR) / L. where mr is their mutual rank and
+L is the number of probes. So a value of 1 means perfect coexpression.
+</p>
+"""
 
 class form(object):
     def GET(self, data=None):
@@ -38,6 +47,7 @@ class form(object):
         """
         if data:
             form += "<textarea cols='50' rows='%i'>%s</textarea>" % (max(len(data), 50), "\n".join(data))
+        form += REFERENCE
         return form
 
     def POST(self):
