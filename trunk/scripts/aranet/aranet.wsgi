@@ -36,6 +36,12 @@ AT2G07681,ATMG00960
 AT4G19006,AT5G64760
 """
 
+REFERENCE = """
+<a href="http://www.functionalnet.org/aranet/about.html">Aranet site</a>
+<p>
+<a href="http://www.nature.com/nbt/journal/v28/n2/abs/nbt.1603.html">Publication</a>
+"""
+
 class form(object):
     def GET(self, form_data=DEFAULT, data=None):
         web.header('Content-type', 'text/html')
@@ -48,7 +54,7 @@ class form(object):
         """ % form_data
         if data:
             form += "<textarea cols='50' rows='%i'>%s</textarea>" % (max(len(data), 50), "\n".join(data))
-        return form
+        return form + REFERENCE
 
     def POST(self):
         web.header('Content-type', 'text/plain')
@@ -85,6 +91,6 @@ class query(object):
             return "%s not found" % aidx
         elif bidx is None:
             return "%s not found" % bidx
-        return str(coexp[aidx][bidx])
+        return str(aranet[aidx][bidx])
 
 application = web.application(urls, globals()).wsgifunc()
