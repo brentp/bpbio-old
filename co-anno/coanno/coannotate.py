@@ -230,7 +230,8 @@ def merge(main, missed, merge_file, Klass):
         return cmp(a['seqid'], b['seqid']) or cmp(a['start'], b['start'])
 
     new_rows.sort(cmp=row_cmp)
-    print >>merge_fh, "\t".join(Klass.names)
+    if Klass == Flat:
+        print >>merge_fh, "\t".join(Klass.names)
     for i, row in enumerate(new_rows):
         if Klass == Flat:
             row['id'] = i + 1
