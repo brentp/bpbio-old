@@ -155,7 +155,8 @@ def dispatch(cfg, flip=False):
     min_len = cfg["default"]["min_len"]
     min_pct_coverage = cfg["default"]["min_pct_coverage"]
 
-    out_flat = "missed_%s_from_%s.flat" % (cfg[bkey]["name"], cfg[akey]["name"])
+    ext = op.splitext(cfg[akey]['flat'])[1].lstrip(".")
+    out_flat = "missed_%s_from_%s.%s" % (cfg[bkey]["name"], cfg[akey]["name"], ext)
     out_flat = os.path.join(cfg["default"]["out_dir"], out_flat)
     out_fh = open(out_flat, "w")
     
@@ -165,15 +166,11 @@ def dispatch(cfg, flip=False):
     a_b_blast = bblast.get_blast_file(afasta.replace(".fa", ".features.fa"),
                                       bfasta.replace(".fa", ".features.fa"), odir)
     new_genes = collections.defaultdict(dict)
-    ext = op.splitext(cfg[akey]['flat'])[1].lstrip(".")
-    print >>sys.stderr, ext
-    1/0
 
     Klass = Bed if ext == "bed" else Flat
 
     aflat = Klass(cfg[akey]["flat"], cfg[akey]["fasta"])
     bflat = Klass(cfg[bkey]["flat"], cfg[bkey]["fasta"])
-    last_id = bflat[-1]['id']
 
     for new_gene in find_missed(cfg[bkey]["name"],
                             aflat, bflat,
@@ -194,7 +191,8 @@ def dispatch(cfg, flip=False):
                                      cfg['default']['min_pct_coverage'], match_file)
 
     merged_genes = exclude_genes_in_high_repeat_areas(merged_genes, bfasta)
-    print >>out_fh, "\t".join(Klass.names)
+    if Klass == Flat:
+        print >>out_fh, "\t".join(Klass.names)
     for i, new_gene in enumerate(merged_genes):
         print >>out_fh, Klass.row_string(new_gene)
     out_fh.close()
@@ -202,27 +200,31 @@ def dispatch(cfg, flip=False):
                       % (i, out_flat, match_file))
 
     merge_file = "%s.all.%s" % (os.path.splitext(cfg[bkey]['flat'])[0], ext)
-    log.debug("writing merged .flat file with new features to %s" % merge_file)
+    log.debug("writing merged .%s file with new features to %s" % (ext, merge_file))
     merge(bflat, Klass(out_flat), merge_file, Klass)
 
 
 def merge(main, missed, merge_file, Klass):
     merge_fh = open(merge_file, "w")
-    cds_missed = missed[missed['ftype'] == 'CDS']
-    count = main.shape[0] + missed[missed['ftype'] != 'CDS'].shape[0]
+    #cds_missed = missed[missed['ftype'] == 'CDS']
+    #count = main.shape[0] + missed[missed['ftype'] != 'CDS'].shape[0]
     new_rows = []
     seen_accns = {}
-    for row_missed in cds_missed:
-        main_row = main[main['accn'] == row_missed['accn']][0]
+    # CDS added to existing gene.
+    for row_missed in missed:
+        if row_missed['accn'] in seen_accns: continue
+        try:
+            main_row = main.accn(row_missed['accn'])
+            # it's a CDS
+        except KeyError:
+            # it's a new gene
+            new_rows.append(row_missed)
+            seen_accns[row_missed['accn']] = True
+            continue
         locs = main_row['locs'] + row_missed['locs']
         main_row['locs'].sort()
         new_rows.append(main_row)
         seen_accns[main_row['accn']] = True
-
-    for row in missed[missed['ftype'] != 'CDS']:
-        new_rows.append(row)
-    for row in (r for r in main if not r['accn'] in seen_accns):
-        new_rows.append(row)
 
     def row_cmp(a, b):
         return cmp(a['seqid'], b['seqid']) or cmp(a['start'], b['start'])
@@ -233,7 +235,6 @@ def merge(main, missed, merge_file, Klass):
         if Klass == Flat:
             row['id'] = i + 1
         print >>merge_fh, Klass.row_string(row)
-    assert i + 1 == count, (i + 1, count)
 
 
 def exclude_genes_in_high_repeat_areas(merged_genes, bfasta):
