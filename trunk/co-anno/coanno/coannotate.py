@@ -4,13 +4,13 @@ import bblast
 import collections
 import operator
 import os
+import os.path as op
 import sys
 import string
 from biostuff import BlastLine
 from pyfasta import Fasta
 import mask_features as mf
-sys.path.insert(0, "/opt/src/flatfeature")
-from flatfeature import Flat
+from flatfeature import Flat, Bed
 
 
 
@@ -165,9 +165,15 @@ def dispatch(cfg, flip=False):
     a_b_blast = bblast.get_blast_file(afasta.replace(".fa", ".features.fa"),
                                       bfasta.replace(".fa", ".features.fa"), odir)
     new_genes = collections.defaultdict(dict)
-    aflat = Flat(cfg[akey]["flat"], cfg[akey]["fasta"])
-    bflat = Flat(cfg[bkey]["flat"], cfg[bkey]["fasta"])
-    flat_to_str.id = bflat[-1]['id']
+    ext = op.splitext(cfg[akey]['flat'])[1].lstrip(".")
+    print >>sys.stderr, ext
+    1/0
+
+    Klass = Bed if ext == "bed" else Flat
+
+    aflat = Klass(cfg[akey]["flat"], cfg[akey]["fasta"])
+    bflat = Klass(cfg[bkey]["flat"], cfg[bkey]["fasta"])
+    last_id = bflat[-1]['id']
 
     for new_gene in find_missed(cfg[bkey]["name"],
                             aflat, bflat,
@@ -188,19 +194,19 @@ def dispatch(cfg, flip=False):
                                      cfg['default']['min_pct_coverage'], match_file)
 
     merged_genes = exclude_genes_in_high_repeat_areas(merged_genes, bfasta)
-    print >>out_fh, "\t".join(Flat.names)
+    print >>out_fh, "\t".join(Klass.names)
     for i, new_gene in enumerate(merged_genes):
-        print >>out_fh, flat_to_str(new_gene)
+        print >>out_fh, Klass.row_string(new_gene)
     out_fh.close()
     log.debug("created %i new features in %s. with matches written to %s." \
                       % (i, out_flat, match_file))
 
-    merge_file = "%s.all.flat" % os.path.splitext(cfg[bkey]['flat'])[0]
+    merge_file = "%s.all.%s" % (os.path.splitext(cfg[bkey]['flat'])[0], ext)
     log.debug("writing merged .flat file with new features to %s" % merge_file)
-    merge(bflat, Flat(out_flat), merge_file)
+    merge(bflat, Klass(out_flat), merge_file, Klass)
 
 
-def merge(main, missed, merge_file):
+def merge(main, missed, merge_file, Klass):
     merge_fh = open(merge_file, "w")
     cds_missed = missed[missed['ftype'] == 'CDS']
     count = main.shape[0] + missed[missed['ftype'] != 'CDS'].shape[0]
@@ -222,17 +228,13 @@ def merge(main, missed, merge_file):
         return cmp(a['seqid'], b['seqid']) or cmp(a['start'], b['start'])
 
     new_rows.sort(cmp=row_cmp)
-    print >>merge_fh, "\t".join(Flat.names)
+    print >>merge_fh, "\t".join(Klass.names)
     for i, row in enumerate(new_rows):
-        row['id'] = i + 1
-        print >>merge_fh, Flat.row_string(row)
+        if Klass == Flat:
+            row['id'] = i + 1
+        print >>merge_fh, Klass.row_string(row)
     assert i + 1 == count, (i + 1, count)
 
-def flat_to_str(g):
-    flat_to_str.id += 1
-    return "\t".join(map(str, (flat_to_str.id, g['seqid'], g['accn'], g['start'], g['end'], g['strand'], g['type'], "%s,%s" % (g['start'], g['end']))))
-
-                     
 
 def exclude_genes_in_high_repeat_areas(merged_genes, bfasta):
     #print "FASTA:", afasta
