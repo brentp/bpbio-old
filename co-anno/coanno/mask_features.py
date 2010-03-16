@@ -1,8 +1,7 @@
 from pyfasta import Fasta
 import os
 import sys
-sys.path.insert(0, "/opt/src/flatfeature")
-from flatfeature import Flat
+from flatfeature import Flat, Bed
 import numpy as np
 
 import logging
@@ -99,7 +98,8 @@ def main(flat_file, fasta_file, inverse=False):
         log.debug("%s is up-to-date." % (genomic_masked, ))
         return False
 
-    flat = Flat(flat_file, fasta_file)
+    Klass = Flat if flat_file.endswith(".flat") else Bed
+    flat = Klass(flat_file, fasta_file)
     fasta = Fasta(fasta_file)
 
 
