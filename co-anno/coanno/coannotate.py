@@ -226,6 +226,9 @@ def merge(main, missed, merge_file, Klass):
         new_rows.append(main_row)
         seen_accns[main_row['accn']] = True
 
+    for row in (r for r in main if not r['accn'] in seen_accns):
+        new_rows.append(row)
+
     def row_cmp(a, b):
         return cmp(a['seqid'], b['seqid']) or cmp(a['start'], b['start'])
 
