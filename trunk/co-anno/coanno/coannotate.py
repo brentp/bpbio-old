@@ -219,7 +219,7 @@ def merge(main, missed, merge_file, Klass):
         except KeyError:
             # it's a new gene
             new_rows.append(row_missed)
-            seen_accns[row_missed['accn']] = True
+            #seen_accns[row_missed['accn']] = True
             continue
         locs = main_row['locs'] + row_missed['locs']
         main_row['locs'].sort()
