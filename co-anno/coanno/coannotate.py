@@ -81,7 +81,6 @@ def merge_overlapping(new_genes, min_overlap, min_pct_coverage, match_file):
             g = genes[i].copy()
             matches = g.pop('match')
             new_stop = g['end']
-            #print >>dbg, g
 
             last_gene = None # keep track of gene on other strand.
 
@@ -194,6 +193,8 @@ def dispatch(cfg, flip=False):
     if Klass == Flat:
         print >>out_fh, "\t".join(Klass.names)
     for i, new_gene in enumerate(merged_genes):
+        new_gene['locs'] = [(new_gene['start'], new_gene['end'])]
+        new_gene['score'] = new_gene['rgb'] = new_gene['thick'] = "."
         print >>out_fh, Klass.row_string(new_gene)
     out_fh.close()
     log.debug("created %i new features in %s. with matches written to %s." \
