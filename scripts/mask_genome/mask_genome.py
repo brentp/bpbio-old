@@ -4,7 +4,7 @@ blast of that fasta. and generate a new fasta in which all basepairs occuring
 more then `cutoff` times are masked. e.g.:
     $ python mask_genome.py -b rice_rice.blast -o rice -f rice.fasta -c 50
 will create a new fasta file rice.masked.50.fasta
-""" 
+"""
 import numpy as np
 from pyfasta import Fasta
 import tables
@@ -59,7 +59,7 @@ def get_node(org, mode):
         h5 = tables.openFile(H5, mode='r')
         return h5, getattr(h5.root, org)
 
-def count_freq(blast_file, fasta, org):
+def count_freq(blast_file, fasta, org, count_subject=True):
     """one large blast file """
     h5, node = get_node(org, 'w')
 
@@ -74,20 +74,21 @@ def count_freq(blast_file, fasta, org):
         qchr, schr = line[:2]
 
         qstart, qstop, sstart, sstop = map(int, line[6:10])
-        if sstart > sstop: sstart, sstop = sstop, sstart
 
         if not qchr in cache:
             update_cache(qchr, node, len(f[qchr]), h5, cache)
             cache_clear(cache, node, qchr, schr)
-
-        if not schr in cache:
-            update_cache(schr, node, len(f[schr]), h5, cache)
-            cache_clear(cache, node, qchr, schr)
-
         # convert to 0-based indexes:
         # 1 8 => 0 8, but range doesnt include upper boud.
         cache[qchr][qstart - 1: qstop] += 1
-        cache[schr][sstart - 1: sstop] += 1
+
+        if count_subject:
+            if sstart > sstop: sstart, sstop = sstop, sstart
+            if not schr in cache:
+                update_cache(schr, node, len(f[schr]), h5, cache)
+                cache_clear(cache, node, qchr, schr)
+                cache[schr][sstart - 1: sstop] += 1
+
 
     for achr in cache:
         getattr(node, 'c' + achr)[:] = cache[achr]
@@ -157,6 +158,8 @@ if __name__ == "__main__":
     p.add_option("-c", dest="cutoff", 
                  help="cutoff value, bp locations appearing in the blast more\n"
                  "than this many times are masked", type='int', default=50)
+    p.add_option("-S", dest="no_subject", default=False, action="store_true",
+             help="do NOT count subject hits (only query) when tabulating")
     p.add_option("-m", dest="mask", help=\
          "mask sequence with this letter (usually 'X' or 'N'). if == 'SOFT',"
          "then the sequence subjected to soft-masking where all repetitive"
@@ -175,6 +178,6 @@ if __name__ == "__main__":
     if options.h5: H5=options.h5
 
     assert len(options.mask) == 1 or options.mask.lower() == 'soft'
-    count_freq(options.blast, options.fasta, options.org)
+    count_freq(options.blast, options.fasta, options.org, not options.no_subject)
     print "> done counting..."
     mask(options.fasta, options.org, options.cutoff, options.mask)
