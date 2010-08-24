@@ -54,7 +54,10 @@ def write_feature(fh, feat, fasta, seen_ids):
 
     """
     name = feat['accn']
-    assert not name in seen_ids, (name, "used more than 1X", feat)
+    if name in seen_ids:
+        print >>sys.stderr, "WARNING:", name, "used more than 1X:", feat
+        # probably it appeared on + and - strand.
+        return
     seen_ids[name] = None
     fh.write('>' + name + '\n')
     fdict = {'chr': feat['seqid'], 'start': feat['start'], 'stop': feat['end'], 'strand': feat['strand'] }
