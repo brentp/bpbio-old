@@ -74,6 +74,7 @@ def merge_overlapping(new_genes, min_overlap, min_pct_coverage, match_file):
         genes = sorted([g for _name, g in genes.items()], key=operator.itemgetter('start'))
         i, j = 0, 1
         used_genes = set([])
+        seen = {}
         while i < len(genes):
 
             # it was probably seen on the other strand.
@@ -107,6 +108,9 @@ def merge_overlapping(new_genes, min_overlap, min_pct_coverage, match_file):
                 merged += 1
           
             g['end'] = new_stop
+            key = g['start'], g['end']
+            if key in seen: continue
+            seen[key] = None
             fix_name(g)
             assert len(g['accn']) <= 80, (len(g['accn']), g)
 
@@ -194,7 +198,7 @@ def dispatch(cfg, flip=False):
         print >>out_fh, "\t".join(Klass.names)
     for i, new_gene in enumerate(merged_genes):
         new_gene['locs'] = [(new_gene['start'], new_gene['end'])]
-        new_gene['score'] = new_gene['rgb'] = new_gene['thick'] = "."
+        new_gene['score'] = new_gene['rgb'] = new_gene['thickend'] = new_gene['thickstart'] = "."
         print >>out_fh, Klass.row_string(new_gene)
     out_fh.close()
     log.debug("created %i new features in %s. with matches written to %s." \
