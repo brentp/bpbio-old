@@ -47,8 +47,11 @@ def count_deletion_runs(astr, deletion="_"):
     is considered to be retained.
     """
     delstr = list(set(astr).difference(deletion))
-    assert len(delstr) == 1, delstr
-    delstr = delstr[0]
+    assert len(delstr) == 1 or set(astr) == set("_"), (delstr, astr)
+    try:
+        delstr = delstr[0]
+    except IndexError:
+        delstr = '1'
     return count_runs(astr, splitter=delstr)
 
 def count_runs(astr, splitter="_"):
@@ -213,13 +216,18 @@ def run_sim(astr):
     return {'deletion_lengths': sorted(list(best)), 'fitness': best.fitness,
             'score': best.score}
 
-GA_LEN = 25
-GA_GENERATIONS = 10000
-MAX_DELETION_SIZE = 10 # > 1000 is same as no removal. 
+GA_LEN = 20
+GA_GENERATIONS = 200
+MAX_DELETION_SIZE = 1000 # > 1000 is same as no removal. 
 
 if __name__ == "__main__":
     # expects a string of deletions 1_1111_11 where "_" is the deletion
     # and a number which is the max deletions to allow (more are removed)
+    f  = open('/var/www/t/frac/both/both_region.under.txt').read().strip()
+    f += open('/var/www/t/frac/both/both_region.over.txt').read().strip()
+    print count_runs(f)
+
+
     import sys
     if len(sys.argv) > 1:
         print "testing..."
@@ -232,7 +240,9 @@ if __name__ == "__main__":
     delstrs = dict(
         #overs = open('over.txt').read().strip(),
         #unders = open('under.txt').read().strip(),
-        both = open('both.txt').read().strip()
+        #both = open('both.txt').read().strip()
+        both = f
+
     )
     # all deletions longer than this are collapsed to nothing
     # assumed not to be real.
