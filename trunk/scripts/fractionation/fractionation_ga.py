@@ -196,10 +196,10 @@ def run_sim(astr):
             for run_length, real_count in real_runs:
                 asum += run_length * abs(real_count - sim_runs.get(run_length, 0))
             # maybe the simulation had some really long runs...
-            for run_length in range(max_real_run_len + 1, max_real_run_len + 10):
+            for run_length in range(max_real_run_len + 1, max_real_run_len + 20):
                 asum += run_length * sim_runs.get(run_length, 0)
         return asum / ntries
-    
+
 
     genome = G1DList.G1DList(len(astr))
     # deletion lenghts vary between 1 and 5
