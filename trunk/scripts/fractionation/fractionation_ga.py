@@ -194,20 +194,22 @@ def run_sim(astr):
             sim_runs = dict(sim_runs)
 
             for run_length, real_count in real_runs:
-                asum += run_length * abs(real_count - sim_runs.get(run_length, 0))
+                #asum += run_length * abs(real_count - sim_runs.get(run_length, 0))
+                asum += abs(real_count - sim_runs.get(run_length, 0))
             # maybe the simulation had some really long runs...
             for run_length in range(max_real_run_len + 1, max_real_run_len + 20):
-                asum += run_length * sim_runs.get(run_length, 0)
+                #asum += run_length * sim_runs.get(run_length, 0)
+                asum += sim_runs.get(run_length, 0)
         return asum / ntries
 
 
     genome = G1DList.G1DList(len(astr))
     # deletion lenghts vary between 1 and 5
-    genome.setParams(rangemin=1, rangemax=5, roundDecimal=5) 
+    genome.setParams(rangemin=1, rangemax=5, roundDecimal=5)
     genome.initializator.set(initializator)
     genome.mutator.set(mutator)
     genome.evaluator.set(evaluator)
-    
+
     ga = GSimpleGA.GSimpleGA(genome)
     ga.setMinimax(minimaxType['minimize'])
     ga.setGenerations(GA_GENERATIONS)
@@ -218,7 +220,7 @@ def run_sim(astr):
 
 GA_LEN = 20
 GA_GENERATIONS = 200
-MAX_DELETION_SIZE = 1000 # > 1000 is same as no removal. 
+MAX_DELETION_SIZE = 1000 # > 1000 is same as no removal.
 
 if __name__ == "__main__":
     # expects a string of deletions 1_1111_11 where "_" is the deletion
