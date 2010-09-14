@@ -36,7 +36,7 @@ def plot_runs(runs, pngpath, ax=None):
     return ax
 
 
-def deletion_sim(region_length, deletion_lengths, deletions, simulations=100, 
+def deletion_sim(region_length, deletion_lengths, deletions, simulations=50,
                  count_retentions=False, real_runs=None, plot=True):
     """
     run a simulation of for the given 'region_length' and number of `deletions`
@@ -44,9 +44,11 @@ def deletion_sim(region_length, deletion_lengths, deletions, simulations=100,
     # initialize as want to know when one is skipped.
     all_runs = dict((x, []) for x in range(400))
     for i in range(simulations):
-        ds, runs = gen_deletions(region_length, deletion_lengths, num_deletions=deletions, count_retentions=False)
+        ds, runs = gen_deletions(region_length, deletion_lengths, num_deletions=deletions, count_retentions=count_retentions)
         for run_length, n in runs:
             all_runs[run_length].append(n)
+
+    all_runs = dict((k, v) for k, v in all_runs.iteritems() if v != [])
 
     if plot:
         ranges = {}
@@ -71,7 +73,7 @@ def deletion_sim(region_length, deletion_lengths, deletions, simulations=100,
         a.errorbar(data[:, 0], data[:, 1], yerr=np.array([data[:, 2], data[:, 3]]), fmt='+', capsize=300, barsabove=True, zorder=2, ecolor='g')
         a.plot(data[:, 0], data[:, 1], 'ko')
         a.text(0.1, 0.95, str(deletion_lengths), transform=a.transAxes)
-        return a
+        return a, all_runs
 
 
 
@@ -81,7 +83,7 @@ def plot(runsdata):
         for homeolog, runs in rdict.items():
             plot_runs(runs, "%s_%s" % (region, homeolog))
 
-def del_sim_from_str(astr, deletion_lengths, simulations=1000, count_retentions=False):
+def del_sim_from_str(astr, deletion_lengths, simulations=100, count_retentions=False):
     region_length = len(astr)
     nretained = len(astr.replace('_', ''))
     deletions = region_length - nretained
@@ -92,26 +94,27 @@ def del_sim_from_str(astr, deletion_lengths, simulations=1000, count_retentions=
                          deletion_lengths=deletion_lengths,
                          deletions=deletions,
                          simulations=simulations,
-                         count_retentions=count_retentions, real_runs=real_runs)
+                         count_retentions=count_retentions, real_runs=real_runs
+                        )
                         
 
-def runall(regions_runs, count_retentions, sims=False):
+def runall(regions_runs, count_retentions, sim_type, max_del=5):
     """
     run and create a figure for each region, string in d
     """
     deletion_lengths=[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     png_template = "data/" + op.splitext(op.basename(regions_runs))[0] \
                 + ".%s" % ('retentions' if count_retentions else 'deletions') \
-                + (".sims" if sims else "") \
+                + ("." + sim_type ) \
+                + ((".%i" % max_del) if sim_type == "sim" else "") \
                 + ".%s.png"
-    print png_template
     for line in open(regions_runs):
         region, runstr = line.strip().split()
         print >>sys.stderr, "saving", png_template % region
-        if not sims:
+        if sim_type == 'one':
             region_with_figure(runstr, png_template % region, count_retentions, deletion_lengths)
-        else:
-            sim = run_sim(runstr)
+        elif sim_type == 'sim':
+            sim = run_sim(runstr, max_del)
             region_with_figure(runstr, png_template % region, count_retentions, sim['deletion_lengths'])
 
 
@@ -131,7 +134,16 @@ def region_with_figure(astr, pngpath, count_retentions,
     else:
         runs = count_deletion_runs(astr)
 
-    ax = del_sim_from_str(astr, deletion_lengths, count_retentions=count_retentions)
+    actual_fh = open(pngpath.replace('.png','.txt').replace('.sim', '.actual'), 'w')
+    print >>sys.stderr, "writing actual to", actual_fh.name
+    for run_length, count in runs:
+        print >> actual_fh, run_length, count
+
+    ax, runs_from_sim = del_sim_from_str(astr, deletion_lengths, count_retentions=count_retentions)
+    txt_fh = open(pngpath.replace('.png', '.txt'), 'w')
+    print >>sys.stderr, "writing sims to", txt_fh.name
+    for run_length in runs_from_sim:
+        print >>txt_fh, run_length, sum(runs_from_sim[run_length])
     plot_runs(runs, None, ax=ax)
     ax.set_xlim(xmax=max(x[0] for x in runs))
     ax.set_ylim(ymax=1.5 * max(x[1] for x in runs))
@@ -149,8 +161,10 @@ if __name__ == "__main__":
     if sys.argv[1].endswith('.txt'):
         runs_file = sys.argv[1]
         do_count_retentions = int(sys.argv[2])
-        do_sims = len(sys.argv) > 3
-        runall(runs_file, do_count_retentions, sims=do_sims)
+        sim_type = sys.argv[3]
+        max_del = len(sys.argv) > 3 and int(sys.argv[4]) or 1
+        assert sim_type in ('sim', 'one', 'gtest')
+        runall(runs_file, do_count_retentions, sim_type=sim_type, max_del=max_del)
 
     """
         sys.exit()
