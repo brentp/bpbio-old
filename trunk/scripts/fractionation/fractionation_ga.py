@@ -158,13 +158,14 @@ def mutator(genome, **args):
 
         if newval > rmax: newval -= 2
         if newval < rmin: newval += 2
+        if newval > rmax: newval = rmax
 
         genome[idx] = newval
         mutations += 1
     return mutations
 
 
-def run_sim(astr):
+def run_sim(astr, max_del=5):
     """
     given an example deletion/retention string, where
     "_" is a deletion, run a ga simulation to determine
@@ -204,8 +205,8 @@ def run_sim(astr):
 
 
     genome = G1DList.G1DList(len(astr))
-    # deletion lenghts vary between 1 and 5
-    genome.setParams(rangemin=1, rangemax=5, roundDecimal=5)
+    # deletion lenghts vary between 1 and 5 (max_del)
+    genome.setParams(rangemin=1, rangemax=max_del, roundDecimal=1)
     genome.initializator.set(initializator)
     genome.mutator.set(mutator)
     genome.evaluator.set(evaluator)
@@ -219,7 +220,7 @@ def run_sim(astr):
             'score': best.score}
 
 GA_LEN = 20
-GA_GENERATIONS = 200
+GA_GENERATIONS = 100
 MAX_DELETION_SIZE = 1000 # > 1000 is same as no removal.
 
 if __name__ == "__main__":
