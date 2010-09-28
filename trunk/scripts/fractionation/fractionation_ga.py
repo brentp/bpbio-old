@@ -25,6 +25,7 @@ the run counts.
 
 """
 import sys
+import numpy as np
 
 from pyevolve import G1DList
 from pyevolve import GSimpleGA
@@ -172,6 +173,8 @@ def run_sim(astr, max_del=5):
     the deletion lengths likely to have created that pattern
     of deletion-lengths
     """
+    # hack to let pygene do it's minimization.
+    BIGNUMBER = 1e8
 
     num_deletions = astr.count('_')
     region_length = len(astr)
@@ -186,22 +189,23 @@ def run_sim(astr, max_del=5):
         # since gen_deletions is random, do multiple tries to 
         # make sure an outlier doesnt screw it up.
         ntries = 10
-        asum = 0.0
+        observed_counts = dict(real_runs)
+        observed_counts = np.array([observed_counts.get(i, 0) for i in range(1, max_real_run_len)], 'f')
+        ll = 0
+
         for tries in range(ntries):
             sim_str, sim_runs = gen_deletions(region_length, 
                                               deletion_lengths=deletion_lengths,
                                               num_deletions=num_deletions,
                                               count_retentions=False)
             sim_runs = dict(sim_runs)
+            # fill in zeros. add 1 to avoid probs with log.
+            sim_runs = np.array([sim_runs.get(i, 0) for i in range(1, max_real_run_len)], 'f') + 1
+            sim_freqs = sim_runs / sim_runs.sum()
 
-            for run_length, real_count in real_runs:
-                #asum += run_length * abs(real_count - sim_runs.get(run_length, 0))
-                asum += abs(real_count - sim_runs.get(run_length, 0))
-            # maybe the simulation had some really long runs...
-            for run_length in range(max_real_run_len + 1, max_real_run_len + 20):
-                #asum += run_length * sim_runs.get(run_length, 0)
-                asum += sim_runs.get(run_length, 0)
-        return asum / ntries
+
+            ll += np.sum(observed_counts * np.log(sim_freqs))
+        return BIGNUMBER + ll
 
 
     genome = G1DList.G1DList(len(astr))
@@ -212,7 +216,7 @@ def run_sim(astr, max_del=5):
     genome.evaluator.set(evaluator)
 
     ga = GSimpleGA.GSimpleGA(genome)
-    ga.setMinimax(minimaxType['minimize'])
+    ga.setMinimax(minimaxType['maximize'])
     ga.setGenerations(GA_GENERATIONS)
     ga.evolve(freq_stats=0)
     best = ga.bestIndividual()
