@@ -17,7 +17,10 @@ path = os.path.dirname(__file__)
 histones = {}
 for ichr in range(1, 6):
     schr = str(ichr)
-    histones[schr] = np.memmap(os.path.join(path, 'histone.%s.bin') % schr, dtype=np.float32, mode='r')
+    f = os.path.join(path, "histone.%s.bin") % schr
+    assert os.access(f, os.R_OK)
+
+    histones[schr] = np.memmap(open(os.path.join(path, 'histone.%s.bin') % schr), dtype=np.float32, mode='r')
 
 colors = [(1, 0, 0), (1, 1, 0), (0, 0, 1)]
 
@@ -34,7 +37,7 @@ def application(env, start_response):
     seqid = p['seqid']
 
 
-    hist = histones[seqid][xmin - 1: xmax]
+    hist = np.array(histones[seqid][xmin - 1: xmax])
 
     height = int(p.get('height', 300))
 
