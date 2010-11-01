@@ -67,10 +67,10 @@ cdef DagLine _pair_factory(dict d):
     cdef DagLine instance = DagLine.__new__(DagLine)
     cdef dict da = d['A']
     cdef dict db = d['B']
-    stdlib.strcpy(instance.a_seqid, da['seqid'])
-    stdlib.strcpy(instance.b_seqid, db['seqid'])
-    stdlib.strcpy(instance.a_accn, da['accn'])
-    stdlib.strcpy(instance.b_accn, db['accn'])
+    stdlib.strcpy(instance._a_seqid, da['seqid'])
+    stdlib.strcpy(instance._b_seqid, db['seqid'])
+    stdlib.strcpy(instance._a_accn, da['accn'])
+    stdlib.strcpy(instance._b_accn, db['accn'])
 
     instance.a_start = da['start']
     instance.b_start = db['start']
@@ -82,10 +82,10 @@ cdef DagLine _pair_factory(dict d):
 
 cdef DagLine _factory(dict d):
     cdef DagLine instance = DagLine.__new__(DagLine)
-    stdlib.strcpy(instance.a_seqid, d['a_seqid'])
-    stdlib.strcpy(instance.b_seqid, d['b_seqid'])
-    stdlib.strcpy(instance.a_accn, d['a_accn'])
-    stdlib.strcpy(instance.b_accn, d['b_accn'])
+    stdlib.strcpy(instance._a_seqid, d['a_seqid'])
+    stdlib.strcpy(instance._b_seqid, d['b_seqid'])
+    stdlib.strcpy(instance._a_accn, d['a_accn'])
+    stdlib.strcpy(instance._b_accn, d['b_accn'])
 
     instance.a_start = d['a_start']
     instance.b_start = d['b_start']
