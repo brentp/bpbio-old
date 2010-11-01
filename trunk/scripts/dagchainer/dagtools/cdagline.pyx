@@ -1,7 +1,7 @@
 cdef extern from *:
     ctypedef char* const_char_star "const char*"
 
-cimport stdlib
+from libc cimport stdlib
 
 cdef const_char_star dag_format_line = "%s\t%s\t%i\t%i\t%s\t%s\t%i\t%i\t%lf"
 
@@ -17,17 +17,17 @@ cdef class DagLine:
     """
     cdef public int a_start, a_end, b_start, b_end
     cdef public double evalue
-    cdef public char a_accn[MAXSIZE]
-    cdef public char b_accn[MAXSIZE]
-    cdef public char a_seqid[64]
-    cdef public char b_seqid[64]
+    cdef char _a_accn[MAXSIZE]
+    cdef char _b_accn[MAXSIZE]
+    cdef char _a_seqid[64]
+    cdef char _b_seqid[64]
 
     def __init__(self, char *sline=NULL):
         if sline == NULL: return
         self.evalue = 1.0
         sscanf(sline, dag_format_line, 
-               self.a_seqid, self.a_accn, &self.a_start, &self.a_end,
-               self.b_seqid, self.b_accn, &self.b_start, &self.b_end,
+               self._a_seqid, self._a_accn, &self.a_start, &self.a_end,
+               self._b_seqid, self._b_accn, &self.b_start, &self.b_end,
                &self.evalue)
         if self.evalue < 1e-250: self.evalue = 1e-250
 
@@ -49,6 +49,19 @@ cdef class DagLine:
     @classmethod
     def from_pair_dict(cls, dict d):
         return _pair_factory(d)
+
+    @property
+    def a_seqid(self):
+        return self._a_seqid
+    @property
+    def b_seqid(self):
+        return self._b_seqid
+    @property
+    def a_accn(self):
+        return self._a_accn
+    @property
+    def b_accn(self):
+        return self._b_accn
 
 cdef DagLine _pair_factory(dict d):
     cdef DagLine instance = DagLine.__new__(DagLine)
