@@ -41,7 +41,7 @@ class IntervalTree(object):
         """ 
 
         depth -= 1
-        if (depth == 0 or len(intervals) < minbucket) and len(intervals) > maxbucket:
+        if (depth == 0 or len(intervals) < minbucket) and len(intervals) < maxbucket:
             self.intervals = intervals
             self.left = self.right = None
             return 
